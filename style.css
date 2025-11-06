@@ -1,0 +1,95 @@
+@font-face {
+  font-family: 'Amiri Quran';
+  src: url('fonts/AmiriQuran-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #fff9d6; /* açık sarı arka plan */
+  font-family: 'Amiri Quran', serif;
+  direction: rtl;
+  color: #000;
+}
+
+main {
+  max-width: 900px;
+  margin: 3rem auto;
+}
+
+/* Dropdown çerçevesi */
+.dropdown-frame {
+  background-color: #e6c85f; /* koyu sarı */
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+select {
+  font-size: 1.2rem;
+  padding: 0.5rem 1rem;
+  direction: rtl;
+  font-family: 'Amiri Quran', serif;
+  background-color: #fff9d6;
+  border: 1px solid #c2b060;
+  border-radius: 6px;
+}
+
+/* Sure çerçevesi */
+.surah-frame {
+  background-color: #e6c85f; /* koyu sarı */
+  padding: 3rem;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* Sure başlığı */
+h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+/* Bismillah */
+.bismillah {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #444;
+}
+
+/* Ayet satırı */
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+  margin-bottom: 2rem;
+  direction: rtl;
+  text-align: right;
+}
+
+/* Kelime */
+.word {
+  display: inline-block;
+  font-size: 2rem;
+  line-height: 3.2rem;
+  white-space: nowrap;
+  margin-left: 0.5rem;
+  color: #000;
+}
+
+/* Ayet bitiş işareti */
+.ayah-end {
+  display: inline-block;
+  width: 65px;
+  height: 65px;
+  background: url('icon/ayah-end.svg') no-repeat center;
+  background-size: contain;
+  vertical-align: middle;
+  margin: 0 0.3rem;
+}
