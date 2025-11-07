@@ -7,10 +7,23 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #fff9d6;
+  background-color: transparent;
   font-family: 'Amiri Quran', serif;
   direction: rtl;
   color: #000;
+  position: relative;
+  z-index: 1;
+}
+
+#bgVideo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.25;
 }
 
 main {
@@ -20,7 +33,7 @@ main {
 }
 
 .dropdown-frame {
-  background-color: #e6c85f;
+  background-color: rgba(230, 200, 95, 0.85);
   padding: 1rem 2rem;
   border-radius: 12px;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -57,7 +70,7 @@ button {
 }
 
 .surah-frame {
-  background-color: #e6c85f;
+  background-color: rgba(230, 200, 95, 0.85);
   padding: 3rem;
   border-radius: 12px;
   box-shadow: 0 0 20px rgba(0,0,0,0.1);
@@ -100,29 +113,8 @@ h2 {
   display: inline-block;
   width: 36px;
   height: 36px;
-  background: url('icon/ayah-end.svg') no-repeat center;
+  background: url('icons/ayah-end.svg') no-repeat center;
   background-size: contain;
   vertical-align: middle;
   margin: 0 0.3rem;
-}
-#bgVideo {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: -1;
-  opacity: 0.5; /* İstersen 0.1–0.3 arası ayarla */
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  background-color: transparent;
-  font-family: 'Amiri Quran', serif;
-  direction: rtl;
-  color: #000;
-  position: relative;
-  z-index: 1;
 }
