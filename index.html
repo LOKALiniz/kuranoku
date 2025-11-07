@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>İnternetten Kuran Oku</title>
+  <title>القرآن الكريم</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,15 +12,25 @@
   </video>
 
   <main>
+        <div class="theme-toggle">
+      <button id="toggleTheme">🌙 Tema Değiştir</button>
+    </div>
     <div class="dropdown-frame">
       <select id="surahSelect"></select>
       <div class="button-group">
         <button id="playButton">🔊 Oynat</button>
         <button id="resumeButton">🔁 Devam Ettir</button>
         <button id="stopButton">⏹ Durdur</button>
+        <button id="showMealButton">📖 Meali Göster</button>
       </div>
     </div>
+
     <div id="verseContainer"></div>
+
+    <div id="mealContainer" class="meal-frame hidden">
+      <h3>Türkçe Meal</h3>
+      <div id="mealText"></div>
+    </div>
   </main>
 
   <script src="script.js"></script>
