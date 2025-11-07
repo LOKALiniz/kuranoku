@@ -125,7 +125,34 @@ function loadSurah(num) {
             currentWidth = 0
           }
 
-          currentLine.appendChild(span)
-          currentWidth += wordWidth + 8
-        })
+                 currentLine.appendChild(ayahEnd)
+        currentWidth += 44
+      })
+    })
+    .catch(err => {
+      verseContainer.innerHTML = `<p style="color:red;">Sure ${num} yüklenemedi.</p>`
+      console.error(`Hata: Sure ${num} yüklenemedi`, err)
+    })
+}
 
+// Yardımcılar
+function stopAudio() {
+  if (isPlaying && currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+    isPlaying = false
+  }
+}
+
+function createLine() {
+  const div = document.createElement('div')
+  div.className = 'line'
+  return div
+}
+
+function createAyahEnd() {
+  const dot = document.createElement('span')
+  dot.className = 'ayah-end'
+  return dot
+}
