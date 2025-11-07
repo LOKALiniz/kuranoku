@@ -10,52 +10,51 @@ let currentIndex = 0
 let currentVerses = []
 let currentSurahNum = null
 
-// Hızlı dropdown için tek JSON'dan yükle
+// Sayfa açıldığında sure adlarını sıralı şekilde yükle
 window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const res = await fetch('data/surah-list.json')
-    const list = await res.json()
-
-    list.forEach(surah => {
+  for (let i = 1; i <= 114; i++) {
+    try {
+      const res = await fetch(`data/surah/surah_${i}.json`)
+      const surah = await res.json()
       const option = document.createElement('option')
-      option.value = surah.id
-      option.textContent = ` ${surah.name}`
+      option.value = i
+      option.textContent = `${surah.name}`
       surahSelect.appendChild(option)
-    })
-
-    surahSelect.value = 1
-    loadSurah(1)
-  } catch (err) {
-    console.error('Sure listesi yüklenemedi', err)
+    } catch (err) {
+      console.warn(`Sure ${i} yüklenemedi`, err)
+    }
   }
+
+  surahSelect.value = 1
+  loadSurah(1)
 })
 
-// Sure değişince anında yükle
+// Sure değişince ses durur ve yeni sure yüklenir
 surahSelect.addEventListener('input', () => {
   stopAudio()
   loadSurah(surahSelect.value)
 })
 
-// Oku
+// “🔊 Oku” tuşu
 playButton.addEventListener('click', () => {
   stopAudio()
   currentIndex = 0
   startAudio()
 })
 
-// Devam
+// “🔁 Devam Ettir” tuşu
 resumeButton.addEventListener('click', () => {
   if (!isPlaying && currentVerses.length > 0) {
     startAudio()
   }
 })
 
-// Durdur
+// “⏹ Durdur” tuşu
 stopButton.addEventListener('click', () => {
   stopAudio()
 })
 
-// Başlat
+// Sesli okuma başlatıcı
 function startAudio() {
   const surahNum = parseInt(surahSelect.value)
   const audioSurah = surahNum.toString().padStart(3, '0')
@@ -86,7 +85,7 @@ function playNext() {
   }
 }
 
-// Sureyi yükle
+// Sureyi yükle ve göster
 function loadSurah(num) {
   const surahNum = parseInt(num)
 
@@ -95,7 +94,7 @@ function loadSurah(num) {
     .then(surah => {
       verseContainer.innerHTML = `
         <div class="surah-frame">
-          <h2> ${surah.name}</h2>
+          <h2>${surah.name}</h2>
           <div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
         </div>
       `
@@ -125,6 +124,10 @@ function loadSurah(num) {
             currentWidth = 0
           }
 
+          currentLine.appendChild(span)
+          currentWidth += wordWidth + 8
+        })
+
         currentLine.appendChild(ayahEnd)
         currentWidth += 44
       })
@@ -133,4 +136,26 @@ function loadSurah(num) {
       verseContainer.innerHTML = `<p style="color:red;">Sure ${num} yüklenemedi.</p>`
       console.error(`Hata: Sure ${num} yüklenemedi`, err)
     })
+}
+
+// Yardımcılar
+function stopAudio() {
+  if (isPlaying && currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+    isPlaying = false
+  }
+}
+
+function createLine() {
+  const div = document.createElement('div')
+  div.className = 'line'
+  return div
+}
+
+function createAyahEnd() {
+  const dot = document.createElement('span')
+  dot.className = 'ayah-end'
+  return dot
 }
