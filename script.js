@@ -21,7 +21,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const surah = await res.json()
       const option = document.createElement('option')
       option.value = i
-      option.textContent = `سورة ${surah.name}`
+      option.textContent = ` ${surah.name}`
       surahSelect.appendChild(option)
     } catch (err) {
       console.warn(`Sure ${i} yüklenemedi`, err)
@@ -72,7 +72,7 @@ function loadSurah(num) {
     .then(surah => {
       verseContainer.innerHTML = `
         <div class="surah-frame">
-          <h2>سورة ${surah.name}</h2>
+          <h2> ${surah.name}</h2>
           <div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
         </div>
       `
