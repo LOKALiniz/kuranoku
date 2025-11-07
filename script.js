@@ -125,7 +125,7 @@ function loadSurah(num) {
             currentWidth = 0
           }
 
-                 currentLine.appendChild(ayahEnd)
+        currentLine.appendChild(ayahEnd)
         currentWidth += 44
       })
     })
@@ -133,26 +133,4 @@ function loadSurah(num) {
       verseContainer.innerHTML = `<p style="color:red;">Sure ${num} yüklenemedi.</p>`
       console.error(`Hata: Sure ${num} yüklenemedi`, err)
     })
-}
-
-// Yardımcılar
-function stopAudio() {
-  if (isPlaying && currentAudio) {
-    currentAudio.pause()
-    currentAudio.currentTime = 0
-    currentAudio = null
-    isPlaying = false
-  }
-}
-
-function createLine() {
-  const div = document.createElement('div')
-  div.className = 'line'
-  return div
-}
-
-function createAyahEnd() {
-  const dot = document.createElement('span')
-  dot.className = 'ayah-end'
-  return dot
 }
