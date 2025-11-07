@@ -1,22 +1,95 @@
 const surahSelect = document.getElementById('surahSelect')
 const verseContainer = document.getElementById('verseContainer')
+const playButton = document.getElementById('playButton')
+const stopButton = document.getElementById('stopButton')
+const resumeButton = document.getElementById('resumeButton')
 
-// Dropdown’a 114 sureyi ekle
-for (let i = 1; i <= 114; i++) {
-  const option = document.createElement('option')
-  option.value = i
-  option.textContent = `سورة ${i}`
-  surahSelect.appendChild(option)
-}
+let currentAudio = null
+let isPlaying = false
+let currentIndex = 0
+let currentVerses = []
+let currentSurahNum = null
 
-surahSelect.addEventListener('change', (e) => {
-  loadSurah(e.target.value)
+// Sayfa açıldığında sure adlarını sıralı şekilde yükle
+window.addEventListener('DOMContentLoaded', async () => {
+  for (let i = 1; i <= 114; i++) {
+    try {
+      const res = await fetch(`data/surah/surah_${i}.json`)
+      const surah = await res.json()
+      const option = document.createElement('option')
+      option.value = i
+      option.textContent = `${surah.name}`
+      surahSelect.appendChild(option)
+    } catch (err) {
+      console.warn(`Sure ${i} yüklenemedi`, err)
+    }
+  }
+
+  surahSelect.value = 1
+  loadSurah(1)
 })
 
-loadSurah(1)
+// Sure değişince ses durur ve yeni sure yüklenir
+surahSelect.addEventListener('input', () => {
+  stopAudio()
+  loadSurah(surahSelect.value)
+})
 
+// “🔊 Oku” tuşu
+playButton.addEventListener('click', () => {
+  stopAudio()
+  currentIndex = 0
+  startAudio()
+})
+
+// “🔁 Devam Ettir” tuşu
+resumeButton.addEventListener('click', () => {
+  if (!isPlaying && currentVerses.length > 0) {
+    startAudio()
+  }
+})
+
+// “⏹ Durdur” tuşu
+stopButton.addEventListener('click', () => {
+  stopAudio()
+})
+
+// Sesli okuma başlatıcı
+function startAudio() {
+  const surahNum = parseInt(surahSelect.value)
+  const audioSurah = surahNum.toString().padStart(3, '0')
+  currentSurahNum = audioSurah
+
+  fetch(`data/surah/surah_${surahNum}.json`)
+    .then(res => res.json())
+    .then(surah => {
+      currentVerses = Object.entries(surah.verse)
+      isPlaying = true
+      playNext()
+    })
+}
+
+function playNext() {
+  if (currentIndex >= currentVerses.length) {
+    isPlaying = false
+    return
+  }
+
+  const ayahKey = currentVerses[currentIndex][0]
+  const ayahNum = ayahKey.split('_')[1].padStart(3, '0')
+  currentAudio = new Audio(`audio/${currentSurahNum}/${ayahNum}.mp3`)
+  currentAudio.play()
+  currentAudio.onended = () => {
+    currentIndex++
+    playNext()
+  }
+}
+
+// Sureyi yükle ve göster
 function loadSurah(num) {
-  fetch(`data/surah/surah_${num}.json`)
+  const surahNum = parseInt(num)
+
+  fetch(`data/surah/surah_${surahNum}.json`)
     .then(res => res.json())
     .then(surah => {
       verseContainer.innerHTML = `
@@ -28,14 +101,12 @@ function loadSurah(num) {
 
       const frame = verseContainer.querySelector('.surah-frame')
       const verses = Object.entries(surah.verse)
-        .filter(([key]) => key !== "verse_1" && key !== "1") // ← verse_1 tamamen devre dışı
-
       const lineWidth = 720
       let currentLine = createLine()
       frame.appendChild(currentLine)
       let currentWidth = 0
 
-      verses.forEach(([key, text]) => {
+      verses.forEach(([_, text]) => {
         const words = text.trim().split(/\s+/)
         const ayahEnd = createAyahEnd()
 
@@ -43,7 +114,7 @@ function loadSurah(num) {
           const span = document.createElement('span')
           span.className = 'word'
           span.textContent = word
-          frame.appendChild(span) // geçici ölçüm
+          frame.appendChild(span)
           const wordWidth = span.offsetWidth
           frame.removeChild(span)
 
@@ -65,6 +136,16 @@ function loadSurah(num) {
       verseContainer.innerHTML = `<p style="color:red;">Sure ${num} yüklenemedi.</p>`
       console.error(`Hata: Sure ${num} yüklenemedi`, err)
     })
+}
+
+// Yardımcılar
+function stopAudio() {
+  if (isPlaying && currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+    isPlaying = false
+  }
 }
 
 function createLine() {
