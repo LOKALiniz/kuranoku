@@ -222,3 +222,31 @@ body:not(.light) #toggleTheme:hover {
     0 0 48px #aee2ffcc;
 }
 
+@media (max-width: 768px) {
+  h2 { font-size: 2rem; }
+  .bismillah { font-size: 2.2rem; }
+  .word { font-size: 1.6rem; }
+  #mealText p { font-size: 1rem; line-height: 1.6rem; }
+}
+
+@media (max-width: 480px) {
+  h2 { font-size: 1.8rem; }
+  .bismillah { font-size: 2rem; }
+  .word { font-size: 1.4rem; }
+  #mealText p { font-size: 0.9rem; line-height: 1.4rem; }
+}
+@media (max-width: 768px) {
+  .dropdown-frame, .surah-frame, .meal-frame {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+}
+@media (max-width: 480px) {
+  button, select {
+    font-size: 1rem;
+    padding: 0.8rem 1.2rem;
+  }
+}
+@media (max-width: 768px) {
+  #bgVideo { display: none; }
+}
