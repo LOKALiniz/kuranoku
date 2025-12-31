@@ -336,3 +336,103 @@ body:not(.light) #toggleTheme:hover {
   color: #cbd5e0;
   opacity: 0.7;
 }
+/* --- 📱 TELEFON ÖZEL AYARLARI (MEVCUT DÜZENİ BOZMADAN EKLE) --- */
+@media (max-width: 768px) {
+  /* Ana kapsayıcıyı daraltma, ekranı tam kullansın */
+  main {
+    margin: 1rem auto;
+    padding: 0 0.8rem;
+    max-width: 100%;
+  }
+
+  /* Dashboard (Üst Kısım) mobilde sıkışmasın diye dikey hizalama */
+  .dropdown-frame {
+    padding: 1.5rem 1rem !important;
+    gap: 15px !important;
+  }
+
+  /* Arama ve Seçme kısımlarını alt alta al ama genişlet */
+  .search-section {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  /* Arama grubu (Ara + Inputlar) telefonun tam enini kaplasın */
+  .search-group-left {
+    width: 100% !important;
+    display: flex !important;
+  }
+
+  #surahSearch {
+    flex: 1 !important; /* Arama kutusu mobilde esnesin */
+    width: auto !important;
+  }
+
+  #verseSearch {
+    width: 65px !important; /* Ayet kutusu mobilde çok yer kaplamasın */
+  }
+
+  /* Sure seçme kutusu mobilde tam genişlik */
+  #surahSelect {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Buton grubunu (Durdur/Oynat) yan yana sığdırmak için */
+  .button-group {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .button-group button {
+    flex: 1 !important; /* Butonlar mobilde ekranı bölüşsün */
+    font-size: 1rem !important;
+    padding: 0.8rem 0.5rem !important;
+    margin: 0 !important;
+  }
+
+  /* Arapça yazıların mobilde taşmaması için ölçeklendirme */
+  .word {
+    font-size: 1.6rem !important; /* Telefondaki en ideal okuma boyutu */
+    margin-left: 0.3rem !important;
+  }
+
+  h2 {
+    font-size: 1.8rem !important;
+  }
+
+  .bismillah {
+    font-size: 2rem !important;
+  }
+
+  /* Mushaf çerçevesi iç boşluğunu mobilde azalt */
+  .surah-frame {
+    padding: 1.5rem 1rem !important;
+  }
+
+  /* Meal yazısı mobilde ekranı tam sarsın */
+  #mealText p {
+    font-size: 1.1rem !important;
+    line-height: 1.8rem !important;
+  }
+  
+  /* AI Öneri paneli mobilde taşmasın */
+  #ai-suggestion-panel {
+    padding: 15px !important;
+    width: 100% !important;
+  }
+}
+
+/* 🌙 BEYAZ TEMADA OKUNURLUK TAKVİYESİ */
+body.light .word, 
+body.light h2, 
+body.light .bismillah,
+body.light #mealText p {
+  color: #000000 !important; /* Beyaz temada yazıları tam siyah yapar */
+}
+
+body.light .ayah-end {
+  filter: brightness(0) !important; /* Beyaz temada ayet sonu simgesini siyah yapar */
+}
