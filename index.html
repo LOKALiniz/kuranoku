@@ -1,33 +1,36 @@
 <!DOCTYPE html>
-<html lang="tr">
-<html translate="no">
+<html lang="tr" translate="no">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="google" content="notranslate">
-  <title>İnternetten Sure Oku</title>
-  <link rel="preload" href="fonts/AmiriQuran-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <title>Kur'an-ı Kerim Oku </title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <video autoplay muted loop id="bgVideo">
-    
     <source src="video/videoplayback.mp4" type="video/mp4" />
- 
-  
   </video>
 
   <main>
-        <div class="theme-toggle">
+    <div class="theme-toggle">
       <button id="toggleTheme">🌙 Tema Değiştir</button>
     </div>
+
     <div class="dropdown-frame">
+      <div class="search-section">
+        <input type="text" id="surahSearch" placeholder="Sure (Örn: Bakara )">
+        <input type="number" id="verseSearch" placeholder="Ayet" min="1">
+        <button id="quickSearchBtn">🔍 Ara</button>
+      </div>
+
       <select id="surahSelect"></select>
+      
       <div class="button-group">
         <button id="playButton">🔊 Oynat</button>
-        <button id="resumeButton">🔁 Devam Ettir</button>
+        <button id="resumeButton">🔁 Devam</button>
         <button id="stopButton">⏹ Durdur</button>
-        <button id="showMealButton">📖 Meali Göster</button>
+        <button id="showMealButton">📖 Meal</button>
       </div>
     </div>
 
@@ -39,7 +42,6 @@
     </div>
   </main>
 
-  <script src="script.js" defer></script>
-
+  <script src="script.js"></script>
 </body>
 </html>
