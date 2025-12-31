@@ -436,3 +436,147 @@ body.light #mealText p {
 body.light .ayah-end {
   filter: brightness(0) !important; /* Beyaz temada ayet sonu simgesini siyah yapar */
 }
+/* --- 🤖 AI-SMART SCALING LAYER (TELEFON ÖZEL) --- */
+@media screen and (max-width: 480px) {
+  /* 1. Ekran Çerçeve Ayarı: Yazıların kenarlara yapışmasını engeller */
+  main {
+    padding: 0 12px !important;
+    margin-top: 1rem !important;
+  }
+
+  /* 2. Dinamik Font Ölçekleme: Arapça karakterlerin karmaşasını önler */
+  .word {
+    font-size: clamp(1.4rem, 5vw, 1.8rem) !important; /* Ekran küçüldükçe fontu tatlı bir seviyede tutar */
+    margin: 0 2px !important;
+    line-height: 2.4 !important;
+  }
+
+  /* 3. Besmele ve Başlık: Mobilde devasa görünümü engeller */
+  h2 {
+    font-size: 1.6rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .bismillah {
+    font-size: 1.8rem !important;
+    margin: 1.2rem 0 !important;
+  }
+
+  /* 4. Parmak Dostu Butonlar: Tıklama alanını (Target Area) büyütür */
+  #quickSearchBtn, #surahSelect, #surahSearch, #verseSearch {
+    height: 50px !important; /* Standart parmak kalınlığı için ideal */
+    font-size: 1rem !important;
+  }
+
+  .button-group button {
+    height: 48px !important;
+    border-radius: 12px !important;
+  }
+
+  /* 5. Arama Kutusu Optimizasyonu: Elemanları dikeyde şıkça dizer */
+  .dropdown-frame {
+    padding: 1.2rem 1rem !important;
+    border-radius: 18px !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
+  }
+
+  .search-group-left {
+    display: grid !important; /* Flex yerine Grid ile tam kontrol */
+    grid-template-columns: 1fr 60px !important; /* Arama kutusu ve ayet kutusu yan yana */
+    width: 100% !important;
+  }
+
+  #quickSearchBtn {
+    grid-column: 1 / span 2 !important; /* Ara butonu en alta tam genişlik yayılır */
+    border-radius: 0 0 12px 12px !important;
+  }
+
+  #surahSearch {
+    border-radius: 0 12px 0 0 !important;
+  }
+
+  #verseSearch {
+    border-radius: 12px 0 0 0 !important;
+    width: 100% !important;
+  }
+
+  /* 6. Meal Alanı: Telefondaki dar ekranda metni ferahlatır */
+  .meal-frame {
+    padding: 1.2rem !important;
+    margin-top: 1.5rem !important;
+  }
+
+  #mealText p {
+    font-size: 1rem !important;
+    line-height: 1.7 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* 7. AI Öneri Paneli: Telefonun enini tam kaplasın */
+  #ai-suggestion-panel {
+    border-radius: 15px !important;
+    padding: 12px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* 8. Yüksek Çözünürlüklü Telefonlar İçin (Retina Display) Keskinlik */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .word {
+    text-shadow: 0 0 1px rgba(0,0,0,0.1); /* Yazıları daha jilet gibi gösterir */
+  }
+}
+/* -------------------------------------------------------------------
+   ⚠️ SADECE TELEFON İÇİN YAZI BOYUTU ÖLÇEKLENDİRME (3'TE 1 ORANI)
+   Mevcut hiçbir yapıya, hizalamaya veya renge dokunulmaz.
+   ------------------------------------------------------------------- */
+@media screen and (max-width: 480px) {
+  
+  /* Arapça Kelimeler (2rem -> 0.75rem civarı) */
+  .word {
+    font-size: 0.75rem !important;
+    margin-left: 0.15rem !important;
+    line-height: 1.8 !important;
+  }
+
+  /* Sure Başlıkları (2.5rem -> 0.85rem civarı) */
+  h2 {
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Besmele (2.8rem -> 1rem civarı) */
+  .bismillah {
+    font-size: 1rem !important;
+    margin: 0.8rem 0 !important;
+  }
+
+  /* Meal Metni (1.2rem -> 0.5rem civarı) */
+  #mealText p {
+    font-size: 0.55rem !important;
+    line-height: 1rem !important;
+  }
+
+  /* Meal Başlığı */
+  .meal-frame h3 {
+    font-size: 0.7rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Ayet Sonu Simgesi */
+  .ayah-end {
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 0.1rem !important;
+  }
+
+  /* Arama ve Seçim Kutusu Metinleri */
+  select, button, #surahSearch, #verseSearch, #quickSearchBtn {
+    font-size: 0.6rem !important;
+  }
+
+  /* AI Öneri Paneli Yazıları */
+  #ai-suggestion-panel {
+    font-size: 0.5rem !important;
+  }
+}
