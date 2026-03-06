@@ -117,9 +117,51 @@ button:hover {
 
 .button-group {
   margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.button-group button {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 15px;
+  gap: 4px;
+  padding: 0.55rem 0.3rem;
+  font-size: 0.72rem;
+  font-family: sans-serif;
+  min-height: 60px;
+  border-radius: 14px;
+  background: rgba(30,41,59,0.85);
+  color: #c9d8e8;
+  border: 1.5px solid rgba(174,226,255,0.15);
+  cursor: pointer;
+  transition: all 0.18s;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button-group button:hover {
+  background: rgba(30,58,95,0.95);
+  border-color: rgba(174,226,255,0.45);
+  color: #aee2ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(56,189,248,0.15);
+}
+
+.button-group button .btn-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.button-group button .btn-label {
+  font-size: 0.7rem;
+  color: inherit;
+  letter-spacing: 0.01em;
 }
 
 /* 📜 Başlık ve Besmele */
@@ -425,6 +467,139 @@ body:not(.light) #toggleTheme:hover {
   }
 }
 
+/* ===== 🧠 HAFIZLIK PANELİ ===== */
+.hifz-panel {
+  width: 100%;
+  max-width: 560px;
+  background: linear-gradient(135deg, #1a2744 0%, #0f172a 100%);
+  border: 2px solid #aee2ff;
+  border-radius: 18px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(174,226,255,0.25), 0 8px 32px rgba(0,0,0,0.5);
+  animation: hifzFadeIn 0.35s ease;
+}
+
+@keyframes hifzFadeIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hifz-panel-inner {
+  padding: 1.5rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hifz-title {
+  color: #aee2ff;
+  font-size: 1.4rem;
+  text-align: center;
+  margin: 0 0 4px 0;
+  text-shadow: 0 0 12px rgba(174,226,255,0.5);
+}
+
+.hifz-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hifz-row label {
+  color: #cbd5e0;
+  font-size: 1rem;
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+.hifz-row input[type="number"] {
+  background: #2d3748;
+  color: #e2e8f0;
+  border: 1.5px solid #4a6080;
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+  font-size: 1rem;
+  width: 120px;
+  text-align: center;
+  font-family: 'Amiri Quran', serif;
+  box-shadow: none !important;
+  transition: border-color 0.2s;
+  -moz-appearance: textfield;
+}
+.hifz-row input[type="number"]::-webkit-inner-spin-button,
+.hifz-row input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+.hifz-row input[type="number"]:focus {
+  border-color: #aee2ff;
+  outline: none;
+}
+
+.hifz-buttons {
+  justify-content: center;
+  margin-top: 4px;
+  gap: 16px;
+}
+
+.hifz-buttons button {
+  font-size: 1rem !important;
+  padding: 0.6rem 1.4rem !important;
+  border-radius: 12px !important;
+  margin: 0 !important;
+}
+
+.hifz-status {
+  background: rgba(174,226,255,0.08);
+  border: 1px solid rgba(174,226,255,0.25);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  text-align: center;
+}
+
+#hifzStatusText {
+  color: #aee2ff;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Aktif hafızlık modu - parlayan ayet vurgusu */
+.hifz-active-ayah {
+  background: rgba(100, 220, 120, 0.18) !important;
+  color: #6ee7b7 !important;
+  box-shadow: 0 0 20px rgba(100, 220, 120, 0.25) !important;
+}
+
+/* Sayaç rozeti */
+.hifz-counter-badge {
+  display: inline-block;
+  background: #064e3b;
+  color: #6ee7b7;
+  border: 1.5px solid #6ee7b7;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  margin-right: 8px;
+  font-family: sans-serif;
+  vertical-align: middle;
+  animation: badgePulse 0.5s ease;
+}
+@keyframes badgePulse {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Mobil hafızlık paneli */
+@media (max-width: 600px) {
+  .hifz-panel { max-width: 100%; }
+  .hifz-panel-inner { padding: 1.2rem 1rem; }
+  .hifz-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .hifz-row input[type="number"] { width: 100%; }
+  .hifz-row label { min-width: unset; }
+}
+
+/* ===== /HAFIZLIK PANELİ ===== */
+
 /* 🌙 BEYAZ TEMADA OKUNURLUK TAKVİYESİ */
 body.light .word, 
 body.light h2, 
@@ -578,5 +753,748 @@ body.light .ayah-end {
   /* AI Öneri Paneli Yazıları */
   #ai-suggestion-panel {
     font-size: 0.5rem !important;
+  }
+}
+
+/* ============================================================
+   🔥 OTURUM EKRANI - AUTH STYLES
+   ============================================================ */
+
+.auth-screen {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(10, 10, 20, 0.97);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+.auth-box {
+  background: linear-gradient(145deg, #1a2744, #0f172a);
+  border: 2px solid rgba(174,226,255,0.3);
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(174,226,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.auth-logo { font-size: 3.5rem; margin-bottom: 4px; }
+.auth-title { color: #aee2ff; font-size: 1.6rem; margin: 0; text-align: center; }
+.auth-subtitle { color: #64748b; font-size: 0.9rem; margin: 0; text-align: center; }
+
+.auth-tabs {
+  display: flex;
+  background: #0f172a;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  width: 100%;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 0.5rem !important;
+  border-radius: 9px !important;
+  font-size: 0.9rem !important;
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  transition: all 0.2s !important;
+  border: none !important;
+}
+
+.auth-tab.active {
+  background: #1e3a5f !important;
+  color: #aee2ff !important;
+  box-shadow: 0 0 8px rgba(174,226,255,0.2) !important;
+}
+
+#authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.auth-input {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1.5px solid #334155 !important;
+  border-radius: 12px !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+  font-family: sans-serif !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s !important;
+  direction: ltr !important;
+}
+
+.auth-input:focus {
+  border-color: #aee2ff !important;
+  outline: none !important;
+}
+
+.auth-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+.auth-submit-btn {
+  background: linear-gradient(135deg, #38bdf8, #aee2ff) !important;
+  color: #003366 !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 0.75rem !important;
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  width: 100% !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  box-shadow: 0 0 16px rgba(174,226,255,0.3) !important;
+  transition: all 0.2s !important;
+}
+
+.auth-submit-btn:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 0 24px rgba(174,226,255,0.5) !important;
+}
+
+.auth-google-btn {
+  background: #fff !important;
+  color: #1a1a2e !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 0.7rem !important;
+  font-size: 0.95rem !important;
+  font-weight: bold !important;
+  width: 100% !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.g-icon {
+  font-size: 1.1rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #4285f4, #ea4335, #fbbc04, #34a853);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-family: sans-serif;
+}
+
+.auth-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #1e293b;
+  border-top-color: #aee2ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Kullanıcı bar */
+.user-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  color: #aee2ff;
+  font-size: 0.9rem;
+  font-family: sans-serif;
+}
+
+.logout-btn {
+  background: #7f1d1d !important;
+  color: #fca5a5 !important;
+  font-size: 0.8rem !important;
+  padding: 0.3rem 0.8rem !important;
+  border-radius: 8px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Word tooltip */
+.word-tooltip {
+  position: fixed;
+  background: #0f172a;
+  color: #aee2ff;
+  border: 1.5px solid rgba(174,226,255,0.4);
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-family: sans-serif;
+  z-index: 999998;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  transition: opacity 0.15s;
+  direction: ltr;
+}
+
+/* Meal inline */
+.meal-inline {
+  background: rgba(58,43,26,0.9);
+  border-radius: 16px;
+  padding: 1.4rem 1.8rem;
+  max-width: 1100px;
+  margin: 0 auto 2rem auto;
+}
+.meal-inline-title {
+  color: #d4af37;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+/* Ayarlar barı */
+.settings-bar {
+  display: flex; gap: 20px; justify-content: center;
+  align-items: center; flex-wrap: wrap; width: 100%;
+  background: rgba(0,0,0,0.2); border-radius: 14px; padding: 12px 18px;
+}
+.setting-item { display: flex; align-items: center; gap: 10px; color: #aee2ff; font-size: 0.9rem; }
+.setting-item label { white-space: nowrap; }
+.setting-item input[type="range"] { -webkit-appearance: none; width: 120px; height: 6px; border-radius: 4px; background: #2d3748; outline: none; box-shadow: none !important; margin: 0; }
+.setting-item input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #aee2ff; border-radius: 50%; cursor: pointer; }
+.setting-item span { min-width: 44px; color: #e2e8f0; font-size: 0.9rem; text-align: center; }
+
+/* Günün ayeti */
+.daily-verse-box { background: linear-gradient(135deg, #1a2744, #0f1e35); border: 2px solid rgba(174,226,255,0.3); border-radius: 18px; padding: 1.8rem 2rem; margin-bottom: 1.5rem; text-align: center; }
+.dv-header { color: #aee2ff; font-size: 0.9rem; letter-spacing: 1px; margin-bottom: 1rem; text-transform: uppercase; font-family: sans-serif; }
+.dv-arabic { font-family: 'Amiri Quran', serif; font-size: 2.2rem; color: #fff; line-height: 2.2; margin-bottom: 1rem; direction: rtl; }
+.dv-meal { font-size: 1rem; color: #94a3b8; line-height: 1.7; margin-bottom: 0.6rem; direction: ltr; font-family: sans-serif; }
+.dv-ref { font-size: 0.85rem; color: #d4af37; font-style: italic; font-family: sans-serif; }
+
+/* Extra paneller */
+.extra-panel { width: 100%; max-width: 640px; background: linear-gradient(135deg, #1a2744, #0f172a); border: 2px solid #aee2ff; border-radius: 18px; overflow: hidden; animation: hifzFadeIn 0.35s ease; }
+.extra-panel-inner { padding: 1.5rem 1.8rem; display: flex; flex-direction: column; gap: 14px; }
+.panel-title { color: #aee2ff; font-size: 1.4rem; text-align: center; margin: 0; }
+
+/* Zikir */
+.zikr-select-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.zikr-preset { font-family: 'Amiri Quran', serif !important; font-size: 1.1rem !important; padding: 0.4rem 0.9rem !important; border-radius: 20px !important; background: #2d3748 !important; color: #e2e8f0 !important; box-shadow: none !important; border: 1.5px solid #4a6080 !important; margin: 0 !important; }
+.zikr-preset.active-zikr, .zikr-preset:hover { background: #aee2ff !important; color: #003366 !important; border-color: #aee2ff !important; }
+.zikr-display { text-align: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; }
+#zikrArabic { font-family: 'Amiri Quran', serif; font-size: 2rem; color: #fff; direction: rtl; }
+#zikrTr { font-size: 0.95rem; color: #94a3b8; font-family: sans-serif; }
+.zikr-counter-wrap { display: flex; align-items: center; justify-content: center; gap: 20px; }
+#zikrCount { font-size: 4rem; font-weight: bold; color: #aee2ff; min-width: 100px; text-align: center; line-height: 1; font-family: sans-serif; }
+.zikr-target-wrap { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.9rem; font-family: sans-serif; }
+.zikr-target-wrap select { background: #2d3748; color: #e2e8f0; border: 1.5px solid #4a6080; border-radius: 8px; padding: 4px 8px; font-size: 0.9rem; box-shadow: none !important; margin: 0 !important; }
+.zikr-progress-bar { height: 10px; background: #2d3748; border-radius: 8px; overflow: hidden; }
+#zikrProgressFill { height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #aee2ff); border-radius: 8px; transition: width 0.3s; }
+.zikr-btn-row { display: flex; gap: 12px; justify-content: center; }
+#zikrTapBtn { font-size: 1.6rem !important; padding: 0.8rem 2.5rem !important; border-radius: 50px !important; }
+#zikrResetBtn { font-size: 0.95rem !important; padding: 0.6rem 1.2rem !important; border-radius: 12px !important; background: #2d3748 !important; color: #94a3b8 !important; box-shadow: none !important; }
+#zikrTotalWrap { text-align: center; color: #64748b; font-size: 0.85rem; font-family: sans-serif; }
+#zikrTotal { color: #aee2ff; }
+
+/* İstatistik */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.stat-card { background: rgba(0,0,0,0.25); border: 1px solid rgba(174,226,255,0.15); border-radius: 14px; padding: 1rem; text-align: center; }
+.stat-icon { font-size: 1.8rem; }
+.stat-val { font-size: 1.6rem; font-weight: bold; color: #aee2ff; font-family: sans-serif; }
+.stat-label { font-size: 0.8rem; color: #64748b; font-family: sans-serif; }
+.daily-goal-wrap { background: rgba(0,0,0,0.2); border-radius: 14px; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 10px; }
+.daily-goal-header { display: flex; justify-content: space-between; color: #e2e8f0; font-size: 0.95rem; font-family: sans-serif; }
+#dailyGoalStatus { color: #aee2ff; font-weight: bold; }
+.goal-bar { height: 10px; background: #2d3748; border-radius: 8px; overflow: hidden; }
+#goalBarFill { height: 100%; width: 0%; background: linear-gradient(90deg, #10b981, #6ee7b7); border-radius: 8px; transition: width 0.4s; }
+.goal-set-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.goal-set-row label { color: #94a3b8; font-size: 0.85rem; font-family: sans-serif; }
+.goal-set-row input { width: 70px; background: #2d3748; color: #e2e8f0; border: 1.5px solid #4a6080; border-radius: 8px; padding: 4px 8px; font-size: 0.9rem; text-align: center; box-shadow: none !important; }
+.goal-set-row button { font-size: 0.85rem !important; padding: 0.3rem 0.8rem !important; border-radius: 8px !important; margin: 0 !important; }
+.reset-btn { background: #7f1d1d !important; color: #fca5a5 !important; font-size: 0.85rem !important; padding: 0.4rem 1rem !important; border-radius: 10px !important; align-self: center; margin: 0 !important; box-shadow: none !important; }
+
+/* Oyunlar */
+.games-menu { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.game-card-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 160px; padding: 1.2rem 0.8rem !important; border-radius: 16px !important; background: #1e293b !important; border: 2px solid #334155 !important; color: #e2e8f0 !important; box-shadow: none !important; margin: 0 !important; cursor: pointer; }
+.game-card-btn:hover { border-color: #aee2ff !important; }
+.game-icon { font-size: 2rem; }
+.game-name { font-size: 0.9rem; font-weight: bold; color: #aee2ff; text-align: center; font-family: sans-serif; }
+.game-desc { font-size: 0.75rem; color: #64748b; text-align: center; font-family: sans-serif; }
+#quizArea, #matchArea { display: flex; flex-direction: column; gap: 12px; }
+#quizQuestion, #matchQuestion { font-family: 'Amiri Quran', serif; font-size: 1.8rem; color: #fff; text-align: center; direction: rtl; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem; line-height: 2.2; }
+#quizOptions, #matchOptions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.quiz-opt-btn { padding: 0.7rem 1rem !important; border-radius: 12px !important; background: #1e293b !important; color: #e2e8f0 !important; font-size: 0.9rem !important; border: 1.5px solid #334155 !important; box-shadow: none !important; margin: 0 !important; white-space: normal !important; line-height: 1.4 !important; direction: ltr; font-family: sans-serif !important; }
+.quiz-opt-btn.correct { background: #064e3b !important; border-color: #6ee7b7 !important; color: #6ee7b7 !important; }
+.quiz-opt-btn.wrong { background: #7f1d1d !important; border-color: #f87171 !important; color: #f87171 !important; }
+#quizFeedback, #matchFeedback { text-align: center; font-size: 1rem; min-height: 24px; color: #aee2ff; font-family: sans-serif; }
+#quizScore, #matchScore { text-align: center; color: #64748b; font-size: 0.85rem; font-family: sans-serif; }
+#quizNextBtn, #matchNextBtn, #quizBackBtn, #matchBackBtn { align-self: center; font-size: 0.95rem !important; padding: 0.5rem 1.2rem !important; border-radius: 10px !important; margin: 0 !important; }
+#quizBackBtn, #matchBackBtn { background: #2d3748 !important; color: #94a3b8 !important; box-shadow: none !important; }
+
+/* Mobil */
+@media (max-width: 600px) {
+  .auth-box { padding: 1.8rem 1.2rem; }
+  #quizOptions, #matchOptions { grid-template-columns: 1fr; }
+  .game-card-btn { width: 140px; }
+  .dv-arabic { font-size: 1.6rem; }
+  .extra-panel-inner { padding: 1rem 0.9rem; }
+  .settings-bar { padding: 10px; gap: 12px; }
+  .setting-item input[type="range"] { width: 90px; }
+}
+
+@media (min-width: 1400px) {
+  .dv-arabic { font-size: 2.8rem; }
+  .stat-val { font-size: 2rem; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   🔑 SAĞ ÜST AUTH BAR
+════════════════════════════════════════════════════════════ */
+.top-auth-bar {
+  position: fixed; top: 14px; right: 18px; z-index: 99990;
+  display: flex; align-items: center; gap: 8px;
+}
+#topAuthButtons { display: flex; gap: 8px; }
+
+.top-btn-login {
+  background: rgba(174,226,255,0.12) !important;
+  color: #aee2ff !important; border: 1.5px solid rgba(174,226,255,0.5) !important;
+  border-radius: 20px !important; padding: 0.38rem 1rem !important;
+  font-size: 0.82rem !important; font-family: sans-serif !important;
+  cursor: pointer !important; backdrop-filter: blur(6px);
+  transition: all 0.2s !important; margin: 0 !important; box-shadow: none !important;
+}
+.top-btn-login:hover { background: rgba(174,226,255,0.22) !important; }
+
+.top-btn-register {
+  background: linear-gradient(135deg, #38bdf8, #aee2ff) !important;
+  color: #003366 !important; border: none !important; border-radius: 20px !important;
+  padding: 0.38rem 1rem !important; font-size: 0.82rem !important; font-weight: bold !important;
+  font-family: sans-serif !important; cursor: pointer !important;
+  box-shadow: 0 0 12px rgba(174,226,255,0.35) !important;
+  transition: all 0.2s !important; margin: 0 !important;
+}
+.top-btn-register:hover { transform: scale(1.05) !important; }
+
+#topUserInfo {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(174,226,255,0.2);
+  border-radius: 20px; padding: 4px 10px 4px 12px; backdrop-filter: blur(6px);
+}
+.top-user-name {
+  color: #aee2ff; font-size: 0.82rem; font-family: sans-serif;
+  white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;
+}
+.top-btn-logout {
+  background: #7f1d1d !important; color: #fca5a5 !important; border: none !important;
+  border-radius: 14px !important; padding: 0.22rem 0.65rem !important;
+  font-size: 0.75rem !important; font-family: sans-serif !important;
+  cursor: pointer !important; margin: 0 !important; box-shadow: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   🔐 AUTH MODAL
+════════════════════════════════════════════════════════════ */
+.auth-modal-overlay {
+  position: fixed; inset: 0; z-index: 999990;
+  background: rgba(0,0,0,0.78); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.auth-modal-overlay.hidden { display: none !important; }
+
+.auth-box {
+  background: linear-gradient(145deg, #1a2744, #0f172a);
+  border: 2px solid rgba(174,226,255,0.25); border-radius: 24px;
+  padding: 2.2rem 1.8rem; width: 100%; max-width: 390px;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.7), 0 0 40px rgba(174,226,255,0.06);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  position: relative;
+}
+.auth-modal-close {
+  position: absolute !important; top: 12px !important; right: 14px !important;
+  background: #334155 !important; color: #94a3b8 !important; border: none !important;
+  border-radius: 8px !important; width: 28px !important; height: 28px !important;
+  padding: 0 !important; font-size: 0.85rem !important; cursor: pointer !important;
+  box-shadow: none !important; margin: 0 !important;
+}
+.auth-logo { font-size: 2.8rem; }
+.auth-title { color: #aee2ff; font-size: 1.45rem; margin: 0; font-family: sans-serif; }
+.auth-subtitle { color: #64748b; font-size: 0.88rem; margin: 0; font-family: sans-serif; }
+
+.auth-tabs {
+  display: flex; background: #0f172a; border-radius: 12px; padding: 4px; gap: 4px; width: 100%;
+}
+.auth-tab {
+  flex: 1; padding: 0.45rem !important; border-radius: 9px !important; font-size: 0.88rem !important;
+  background: transparent !important; color: #64748b !important; box-shadow: none !important;
+  margin: 0 !important; transition: all 0.2s !important; border: none !important; font-family: sans-serif !important;
+}
+.auth-tab.active { background: #1e3a5f !important; color: #aee2ff !important; box-shadow: 0 0 8px rgba(174,226,255,0.15) !important; }
+
+#authForm { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+.auth-divider {
+  display: flex; align-items: center; gap: 10px; color: #334155; font-size: 0.8rem; font-family: sans-serif;
+}
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: #1e293b; }
+
+/* ════════════════════════════════════════════════════════════
+   📊 İSTATİSTİK GİRİŞ PROMPT
+════════════════════════════════════════════════════════════ */
+.stats-login-prompt {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 1.5rem 1rem; text-align: center;
+}
+.slp-icon { font-size: 3rem; }
+.slp-text { color: #94a3b8; font-size: 0.92rem; font-family: sans-serif; line-height: 1.5; max-width: 260px; }
+.slp-btn {
+  background: linear-gradient(135deg, #38bdf8, #aee2ff) !important;
+  color: #003366 !important; border: none !important; border-radius: 20px !important;
+  padding: 0.55rem 1.5rem !important; font-size: 0.92rem !important; font-weight: bold !important;
+  font-family: sans-serif !important; cursor: pointer !important; margin: 0 !important;
+  box-shadow: 0 0 16px rgba(174,226,255,0.3) !important; transition: all 0.2s !important;
+}
+.slp-btn:hover { transform: scale(1.04) !important; }
+
+/* ════════════════════════════════════════════════════════════
+   🎮 OYUNLAR - YENİ STİLLER
+════════════════════════════════════════════════════════════ */
+.game-area { display: flex; flex-direction: column; gap: 12px; }
+
+.quiz-question-box {
+  font-family: sans-serif; text-align: center;
+  background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.2rem;
+  border: 1px solid rgba(174,226,255,0.1);
+}
+.quiz-sub { color: #94a3b8; font-size: 0.88rem; margin-bottom: 6px; }
+.quiz-big { color: #aee2ff; font-size: 2rem; font-weight: bold; }
+
+.match-question-box {
+  font-family: 'Amiri Quran', serif; font-size: 1.8rem; color: #fff;
+  text-align: center; direction: rtl; background: rgba(0,0,0,0.3);
+  border-radius: 14px; padding: 1rem; line-height: 2.2;
+  border: 1px solid rgba(174,226,255,0.1);
+}
+.quiz-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.game-feedback { text-align: center; font-size: 1rem; min-height: 24px; color: #aee2ff; font-family: sans-serif; font-weight: bold; }
+.game-score { text-align: center; color: #64748b; font-size: 0.85rem; font-family: sans-serif; }
+.game-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.game-back-btn {
+  background: #2d3748 !important; color: #94a3b8 !important; box-shadow: none !important;
+  font-size: 0.88rem !important; padding: 0.4rem 1rem !important;
+  border-radius: 10px !important; margin: 0 !important;
+}
+
+/* Hangman */
+.hangman-top { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.hangman-face { font-size: 3rem; }
+.hangman-haklar { color: #aee2ff; font-family: sans-serif; font-size: 0.9rem; }
+.hangman-word {
+  font-size: 2rem; letter-spacing: 12px; color: #aee2ff;
+  font-family: 'Courier New', monospace; text-align: center;
+  background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem 1.5rem;
+  direction: ltr; min-height: 60px;
+}
+.hangman-wrong { color: #f87171; font-family: sans-serif; font-size: 0.9rem; text-align: center; min-height: 22px; letter-spacing: 4px; }
+.hangman-input-row { display: flex; gap: 10px; justify-content: center; }
+.hangman-input {
+  background: #1e293b; color: #e2e8f0; border: 2px solid #aee2ff; border-radius: 10px;
+  padding: 0.6rem; font-size: 1.4rem; text-align: center; width: 58px; text-transform: uppercase;
+  direction: ltr; box-shadow: none !important;
+}
+
+/* Memory */
+.memory-header { display: flex; justify-content: space-between; align-items: center; }
+.memory-moves { color: #aee2ff; font-family: sans-serif; font-size: 0.9rem; }
+.memory-new-btn {
+  background: #334155 !important; color: #94a3b8 !important; box-shadow: none !important;
+  font-size: 0.8rem !important; padding: 0.3rem 0.8rem !important;
+  border-radius: 8px !important; margin: 0 !important;
+}
+.memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mem-card {
+  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+  position: relative; transform-style: preserve-3d; transition: transform 0.45s;
+}
+.mem-card.flipped { transform: rotateY(180deg); }
+.mem-front, .mem-back {
+  position: absolute; inset: 0; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: sans-serif; font-size: 0.85rem; backface-visibility: hidden;
+}
+.mem-front { background: linear-gradient(135deg,#1e3a5f,#0f172a); border: 1.5px solid #334155; color: #64748b; font-size: 1.4rem; }
+.mem-back { background: linear-gradient(135deg,#1e4d3b,#0f2d1e); border: 1.5px solid #6ee7b7; color: #e2e8f0; transform: rotateY(180deg); padding: 4px; text-align: center; }
+.mem-card.done .mem-back { background: linear-gradient(135deg,#064e3b,#0a2a1e); border-color: #10b981; color: #6ee7b7; }
+.memory-result { text-align: center; color: #f59e0b; font-family: sans-serif; font-size: 1rem; min-height: 28px; font-weight: bold; }
+
+/* Zikir milestone */
+.zikr-milestone {
+  text-align: center; color: #6ee7b7; font-family: sans-serif; font-size: 0.88rem;
+  min-height: 22px; font-weight: bold; transition: opacity 0.5s; opacity: 0;
+  background: rgba(110,231,183,0.08); border-radius: 8px; padding: 4px 10px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   📢 SİTE DUYURU BANNER
+════════════════════════════════════════════════════════════ */
+#siteBanner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 999980;
+  background: linear-gradient(135deg, #1e3a5f, #0f172a);
+  border-bottom: 2px solid #f59e0b;
+  padding: 9px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-family: sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+#siteBannerText { color: #fbbf24; font-size: 0.88rem; flex: 1; }
+#siteBannerClose {
+  background: none !important; border: none !important; color: #64748b !important;
+  font-size: 1.1rem !important; cursor: pointer !important; padding: 0 !important;
+  box-shadow: none !important; margin: 0 !important; min-width: 24px; line-height: 1;
+}
+
+/* ════════════════════════════════════════════════════════════
+   🎨 GÜZELLEŞTİRMELER
+════════════════════════════════════════════════════════════ */
+
+/* Mushaf card animasyonu */
+.mushaf-card-v15 {
+  transition: box-shadow 0.4s;
+  animation: cardGlow 8s ease-in-out infinite;
+}
+@keyframes cardGlow {
+  0%,100% { box-shadow: 0 15px 50px rgba(0,0,0,0.6); }
+  50% { box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 0 40px rgba(212,175,55,0.07); }
+}
+
+/* Ayet hover */
+.ayah-unit-v15 {
+  border-radius: 10px; transition: background 0.25s;
+}
+.ayah-unit-v15:hover { background: rgba(174,226,255,0.04); }
+
+/* Günün ayeti animasyon */
+.daily-verse-box {
+  position: relative; overflow: hidden;
+  animation: dvGlow 10s ease-in-out infinite;
+}
+.daily-verse-box::before {
+  content: ''; position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(ellipse at center, rgba(174,226,255,0.03) 0%, transparent 70%);
+  animation: dvRotate 20s linear infinite; pointer-events: none;
+}
+@keyframes dvGlow {
+  0%,100% { border-color: rgba(174,226,255,0.3); }
+  50% { border-color: rgba(174,226,255,0.55); }
+}
+@keyframes dvRotate { to { transform: rotate(360deg); } }
+
+/* Meal item hover */
+.meal-item-v15 {
+  border-radius: 10px; transition: background 0.2s, transform 0.15s;
+}
+.meal-item-v15:hover { background: rgba(174,226,255,0.05) !important; transform: translateX(4px); }
+
+/* Omni overlay animasyonu */
+#neuralOverlayV17 {
+  animation: overlayFade 0.18s ease;
+}
+@keyframes overlayFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Stat kartı hover */
+.stat-card { transition: transform 0.2s, border-color 0.2s; }
+.stat-card:hover { transform: translateY(-3px); border-color: rgba(174,226,255,0.3) !important; }
+
+/* Oyun kartı hover */
+.game-card-btn {
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s !important;
+}
+.game-card-btn:hover {
+  transform: translateY(-5px) !important;
+  border-color: rgba(174,226,255,0.5) !important;
+  box-shadow: 0 10px 28px rgba(174,226,255,0.12) !important;
+}
+
+/* Extra panel slide animasyonu */
+.extra-panel {
+  animation: panelSlide 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes panelSlide {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dropdown frame glow */
+.dropdown-frame {
+  box-shadow: 0 0 0 1px rgba(174,226,255,0.08), 0 20px 40px rgba(0,0,0,0.35);
+  transition: box-shadow 0.3s;
+}
+.dropdown-frame:hover {
+  box-shadow: 0 0 0 1px rgba(174,226,255,0.14), 0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* Mobil */
+@media (max-width: 600px) {
+  .top-auth-bar { top: 8px; right: 8px; }
+  .top-btn-login, .top-btn-register { padding: 0.3rem 0.7rem !important; font-size: 0.75rem !important; }
+  .top-user-name { max-width: 90px; font-size: 0.75rem; }
+  .auth-box { padding: 1.8rem 1.2rem; }
+  .quiz-options-grid { grid-template-columns: 1fr; }
+  .memory-grid { grid-template-columns: repeat(3, 1fr); }
+  .hangman-word { font-size: 1.4rem; letter-spacing: 6px; }
+  .games-menu { justify-content: center; }
+  .game-card-btn { width: 130px !important; }
+}
+
+/* ═══════════════════════════════════════
+   YENİ OYUNLAR CSS
+═══════════════════════════════════════ */
+
+/* Ayet Sırala */
+.order-words-wrap {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;
+}
+.order-word-btn {
+  background: #1e293b; color: #e2e8f0; border: 1.5px solid #334155;
+  border-radius: 10px; padding: 8px 14px; font-size: 0.85rem;
+  cursor: pointer; text-align: left; transition: 0.2s; direction: ltr;
+}
+.order-word-btn:hover:not(:disabled) { border-color: #f59e0b; background: #1e3a5f; }
+.order-word-btn:disabled { opacity: 0.4; cursor: default; }
+.order-answer-wrap {
+  background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+  padding: 10px; min-height: 60px; margin-bottom: 8px; direction: ltr;
+}
+.order-slot {
+  background: #1e3a5f; color: #aee2ff; border-radius: 8px;
+  padding: 5px 10px; font-size: 0.82rem; margin-bottom: 4px;
+  direction: ltr;
+}
+
+/* Hızlı Bilgi Timer */
+.speed-timer-wrap {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.speed-timer-bar {
+  flex: 1; height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden;
+}
+.speed-timer-fill {
+  height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444);
+  width: 100%; transition: width 10s linear;
+}
+.speed-timer-val {
+  color: #f59e0b; font-weight: bold; font-size: 1.2rem; min-width: 28px;
+  text-align: center; font-family: sans-serif;
+}
+
+/* Namaz / Dua paneli genel */
+.extra-panel { overflow: visible !important; }
+
+/* Site banner fix */
+#siteBanner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000; padding: 10px 50px 10px 20px;
+  font-size: 0.9rem; font-family: sans-serif;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+#siteBannerClose {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: rgba(0,0,0,0.2); border: none; border-radius: 50%;
+  width: 26px; height: 26px; cursor: pointer; color: #000; font-size: 0.85rem;
+}
+
+/* Presence pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(110,231,183,0.5); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(110,231,183,0); }
+}
+
+/* Admin indicator badge */
+#adminIndicator {
+  font-family: sans-serif;
+}
+
+/* Badge panel grid item hover */
+#badgeGrid > div:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s;
+  cursor: default;
+}
+
+/* Share panel preview */
+#shareVersePreview {
+  min-height: 80px;
+  border: 1.5px solid #334155;
+}
+
+/* Calendar events */
+#calendarContent > div > div:hover {
+  border-color: rgba(174,226,255,0.3) !important;
+  transition: border-color 0.2s;
+}
+
+/* Game: Word complete input */
+#wcInput:focus {
+  outline: none;
+  border-color: #f59e0b;
+}
+
+/* True/False buttons */
+#tfTrueBtn:hover:not(:disabled), #tfFalseBtn:hover:not(:disabled) {
+  transform: scale(1.04);
+  transition: transform 0.15s;
+}
+
+/* Online users list */
+#adm-onlineList > div {
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Button group responsive override */
+@media (max-width: 480px) {
+  .button-group {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .button-group button {
+    min-height: 54px !important;
+  }
+  .button-group button .btn-icon {
+    font-size: 1.1rem !important;
+  }
+  .button-group button .btn-label {
+    font-size: 0.62rem !important;
   }
 }
