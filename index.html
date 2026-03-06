@@ -4,14 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="google" content="notranslate">
-  <title>Kur'an-ı Kerim Oku </title>
+  <title>Kur'an-ı Kerim Oku</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <video autoplay muted loop id="bgVideo">
     <source src="video/videoplayback.mp4" type="video/mp4" />
   </video>
 
+  <!-- ═══════════════════════════════════════════
+       SAĞ ÜST AUTH BAR
+  ═══════════════════════════════════════════ -->
+  <div id="topAuthBar" class="top-auth-bar">
+    <div id="topAuthButtons">
+      <button id="topLoginBtn" class="top-btn-login">🔑 Giriş Yap</button>
+      <button id="topRegisterBtn" class="top-btn-register">✨ Kayıt Ol</button>
+    </div>
+    <div id="topUserInfo" class="hidden">
+      <span id="topUserName" class="top-user-name">👤</span>
+      <button id="topLogoutBtn" class="top-btn-logout">Çıkış</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       AUTH MODAL
+  ═══════════════════════════════════════════ -->
+  <div id="authModal" class="auth-modal-overlay hidden">
+    <div class="auth-box">
+      <button id="authModalClose" class="auth-modal-close">✕</button>
+      <div class="auth-logo">🕋</div>
+      <h2 class="auth-title">Kur'an-ı Kerim</h2>
+      <p class="auth-subtitle" id="authSubtitle">Hesabınıza giriş yapın</p>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Giriş Yap</button>
+        <button class="auth-tab" id="tabRegister">Kayıt Ol</button>
+      </div>
+      <div id="authForm">
+        <input type="email" id="authEmail" placeholder="E-posta adresi" class="auth-input" />
+        <input type="password" id="authPassword" placeholder="Şifre" class="auth-input" />
+        <input type="password" id="authPasswordConfirm" placeholder="Şifre tekrar" class="auth-input hidden" />
+        <div id="authError" class="auth-error hidden"></div>
+        <button id="authSubmitBtn" class="auth-submit-btn">Giriş Yap</button>
+        <div class="auth-divider"><span>veya</span></div>
+        <button id="authGoogleBtn" class="auth-google-btn"><span class="g-icon">G</span> Google ile Devam Et</button>
+      </div>
+      <div id="authLoading" class="auth-loading hidden">
+        <div class="auth-spinner"></div><span>Yükleniyor...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       ANA UYGULAMA
+  ═══════════════════════════════════════════ -->
   <main>
     <div class="theme-toggle">
       <button id="toggleTheme">🌙 Tema Değiştir</button>
@@ -19,19 +65,448 @@
 
     <div class="dropdown-frame">
       <div class="search-section">
-        <input type="text" id="surahSearch" placeholder="Sure (Örn: Bakara )">
+        <input type="text" id="surahSearch" placeholder="Sure (Örn: Bakara)">
         <input type="number" id="verseSearch" placeholder="Ayet" min="1">
         <button id="quickSearchBtn">🔍 Ara</button>
       </div>
 
       <select id="surahSelect"></select>
-      
-      <div class="button-group">
-        <button id="playButton">🔊 Oynat</button>
-        <button id="resumeButton">🔁 Devam</button>
-        <button id="stopButton">⏹ Durdur</button>
-        <button id="showMealButton">📖 Meal</button>
+
+      <!-- AYARLAR BARI -->
+      <div class="settings-bar">
+        <div class="setting-item">
+          <label>🔤 Yazı</label>
+          <input type="range" id="fontSizeSlider" min="1.2" max="4" step="0.1" value="2.7">
+          <span id="fontSizeVal">2.7rem</span>
+        </div>
+        <div class="setting-item">
+          <label>⚡ Hız</label>
+          <input type="range" id="speedSlider" min="0.5" max="2" step="0.25" value="1">
+          <span id="speedVal">1x</span>
+        </div>
       </div>
+
+      <!-- BUTON GRUBU -->
+      <div class="button-group">
+        <button id="playButton"><span class="btn-icon">🔊</span><span class="btn-label">Oynat</span></button>
+        <button id="resumeButton"><span class="btn-icon">▶️</span><span class="btn-label">Devam</span></button>
+        <button id="stopButton"><span class="btn-icon">⏹</span><span class="btn-label">Durdur</span></button>
+        <button id="showMealButton"><span class="btn-icon">📖</span><span class="btn-label">Meal</span></button>
+        <button id="hifzButton"><span class="btn-icon">🧠</span><span class="btn-label">Hafızlık</span></button>
+        <button id="statsButton"><span class="btn-icon">📊</span><span class="btn-label">İstatistik</span></button>
+        <button id="zikrButton"><span class="btn-icon">📿</span><span class="btn-label">Zikir</span></button>
+        <button id="gamesButton"><span class="btn-icon">🎮</span><span class="btn-label">Oyunlar</span></button>
+        <button id="prayerButton"><span class="btn-icon">🕌</span><span class="btn-label">Namaz Vakti</span></button>
+        <button id="duaButton"><span class="btn-icon">🤲</span><span class="btn-label">Dualar</span></button>
+        <button id="bookmarkButton"><span class="btn-icon">🔖</span><span class="btn-label">Yer İmi</span></button>
+        <button id="searchVerseButton"><span class="btn-icon">🔍</span><span class="btn-label">Ayet Ara</span></button>
+        <button id="badgeButton"><span class="btn-icon">🏅</span><span class="btn-label">Rozetler</span></button>
+        <button id="calendarButton"><span class="btn-icon">📅</span><span class="btn-label">Takvim</span></button>
+        <button id="shareButton"><span class="btn-icon">📤</span><span class="btn-label">Paylaş</span></button>
+      </div>
+
+      <!-- HAFIZLIK PANELİ -->
+      <div id="hifzPanel" class="hifz-panel hidden">
+        <div class="hifz-panel-inner">
+          <h3 class="hifz-title">🧠 Hafızlık Modu</h3>
+          <div class="hifz-row">
+            <label>Başlangıç Ayeti</label>
+            <input type="number" id="hifzStartVerse" placeholder="Boş = 1. ayet" min="1" />
+          </div>
+          <div class="hifz-row">
+            <label>Her Ayet Kaç Tekrar?</label>
+            <input type="number" id="hifzRepeatCount" min="1" max="100" value="3" />
+          </div>
+          <div class="hifz-row hifz-buttons">
+            <button id="hifzStartBtn">▶️ Başlat</button>
+            <button id="hifzStopBtn">⏹ Bitir</button>
+          </div>
+          <div id="hifzStatus" class="hifz-status hidden">
+            <span id="hifzStatusText"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ZİKİR PANELİ -->
+      <div id="zikrPanel" class="extra-panel hidden">
+        <div class="extra-panel-inner">
+          <h3 class="panel-title">📿 Zikir Matik</h3>
+          <div class="zikr-select-row">
+            <button class="zikr-preset" data-zikr="سُبْحَانَ اللَّهِ" data-tr="Sübhanallah">سُبْحَانَ اللَّهِ</button>
+            <button class="zikr-preset" data-zikr="الْحَمْدُ لِلَّهِ" data-tr="Elhamdülillah">الْحَمْدُ لِلَّهِ</button>
+            <button class="zikr-preset" data-zikr="اللَّهُ أَكْبَرُ" data-tr="Allahu Ekber">اللَّهُ أَكْبَرُ</button>
+            <button class="zikr-preset" data-zikr="لَا إِلَهَ إِلَّا اللَّهُ" data-tr="Lailaheillallah">لَا إِلَهَ إِلَّا اللَّهُ</button>
+            <button class="zikr-preset" data-zikr="أَسْتَغْفِرُ اللَّهَ" data-tr="Estağfirullah">أَسْتَغْفِرُ اللَّهَ</button>
+            <button class="zikr-preset" data-zikr="صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ" data-tr="Salevat">صَلَّى اللَّهُ عَلَيْهِ</button>
+          </div>
+          <div class="zikr-display">
+            <div id="zikrArabic">— Zikir Seçin —</div>
+            <div id="zikrTr"></div>
+          </div>
+          <div class="zikr-counter-wrap">
+            <div id="zikrCount">0</div>
+            <div class="zikr-target-wrap">
+              <label>Baz:</label>
+              <select id="zikrTarget">
+                <option value="33">33</option>
+                <option value="99">99</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <div class="zikr-progress-bar"><div id="zikrProgressFill"></div></div>
+          <div id="zikrMilestoneMsg" class="zikr-milestone"></div>
+          <div class="zikr-btn-row">
+            <button id="zikrTapBtn">☝️ Zikret</button>
+            <button id="zikrResetBtn">🔄 Sıfırla</button>
+          </div>
+          <div id="zikrTotalWrap">Toplam: <span id="zikrTotal">0</span></div>
+        </div>
+      </div>
+
+      <!-- İSTATİSTİK PANELİ -->
+      <div id="statsPanel" class="extra-panel hidden">
+        <div class="extra-panel-inner">
+          <h3 class="panel-title">📊 İstatistikler</h3>
+          <!-- Giriş yapılmamış -->
+          <div id="statsLoginPrompt" class="stats-login-prompt">
+            <div class="slp-icon">📊</div>
+            <div class="slp-text">İstatistiklerinizi kaydetmek ve görmek için giriş yapın</div>
+            <button id="statsLoginBtn" class="slp-btn">🔑 Giriş Yap / Kayıt Ol</button>
+          </div>
+          <!-- Giriş yapılmış -->
+          <div id="statsContent" class="hidden">
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val" id="statListenTime">0 dk</div><div class="stat-label">Toplam Dinleme</div></div>
+              <div class="stat-card"><div class="stat-icon">📖</div><div class="stat-val" id="statAyahCount">0</div><div class="stat-label">Okunan Ayet</div></div>
+              <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-val" id="statSurahCount">0</div><div class="stat-label">Açılan Sure</div></div>
+              <div class="stat-card"><div class="stat-icon">🧠</div><div class="stat-val" id="statHifzCount">0</div><div class="stat-label">Hafızlık Seansı</div></div>
+            </div>
+            <div class="daily-goal-wrap">
+              <div class="daily-goal-header">
+                <span>🎯 Günlük Hedef</span>
+                <span id="dailyGoalStatus">0 / <span id="dailyGoalTarget">10</span> ayet</span>
+              </div>
+              <div class="goal-bar"><div id="goalBarFill"></div></div>
+              <div class="goal-set-row">
+                <label>Hedef:</label>
+                <input type="number" id="dailyGoalInput" min="1" max="500" value="10">
+                <button id="setGoalBtn">Kaydet</button>
+              </div>
+            </div>
+            <button id="resetStatsBtn" class="reset-btn">🗑️ Sıfırla</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- OYUNLAR PANELİ -->
+      <div id="gamesPanel" class="extra-panel hidden">
+        <div class="extra-panel-inner">
+          <h3 class="panel-title">🎮 Kuran Oyunları</h3>
+
+          <!-- Ana Menü -->
+          <div class="games-menu" id="gamesMenu">
+            <button class="game-card-btn" id="startQuizBtn">
+              <span class="game-icon">🎯</span>
+              <span class="game-name">Sure Bilgi Yarışması</span>
+              <span class="game-desc">Hangi sureden?</span>
+            </button>
+            <button class="game-card-btn" id="startMatchBtn">
+              <span class="game-icon">🔗</span>
+              <span class="game-name">Ayet-Meal Eşleştir</span>
+              <span class="game-desc">Meali bul</span>
+            </button>
+            <button class="game-card-btn" id="startCountBtn">
+              <span class="game-icon">🔢</span>
+              <span class="game-name">Kaç Ayet Var?</span>
+              <span class="game-desc">Ayet sayısını bil</span>
+            </button>
+            <button class="game-card-btn" id="startHangmanBtn">
+              <span class="game-icon">🔡</span>
+              <span class="game-name">Sure Bulmaca</span>
+              <span class="game-desc">Harfleri tahmin et</span>
+            </button>
+            <button class="game-card-btn" id="startMemoryBtn">
+              <span class="game-icon">🃏</span>
+              <span class="game-name">Hafıza Kartları</span>
+              <span class="game-desc">Çiftleri eşleştir</span>
+            </button>
+            <button class="game-card-btn" id="startOrderBtn">
+              <span class="game-icon">🔀</span>
+              <span class="game-name">Ayet Sırala</span>
+              <span class="game-desc">Doğru sırayı bul</span>
+            </button>
+            <button class="game-card-btn" id="startSurahOrderBtn">
+              <span class="game-icon">📋</span>
+              <span class="game-name">Sure Sırası</span>
+              <span class="game-desc">Kaçıncı sure?</span>
+            </button>
+            <button class="game-card-btn" id="startSpeedQuizBtn">
+              <span class="game-icon">⚡</span>
+              <span class="game-name">Hızlı Bilgi</span>
+              <span class="game-desc">10 sn'de cevapla!</span>
+            </button>
+            <button class="game-card-btn" id="startWordCompleteBtn">
+              <span class="game-icon">✏️</span>
+              <span class="game-name">Kelime Tamamla</span>
+              <span class="game-desc">Eksik kelimeyi yaz</span>
+            </button>
+            <button class="game-card-btn" id="startTrueFalseBtn">
+              <span class="game-icon">✅</span>
+              <span class="game-name">Doğru / Yanlış</span>
+              <span class="game-desc">Hızlı karar ver</span>
+            </button>
+            <button class="game-card-btn" id="startSurahFirstBtn">
+              <span class="game-icon">🔤</span>
+              <span class="game-name">İlk Ayet Kim?</span>
+              <span class="game-desc">Sure başlangıcını bul</span>
+            </button>
+          </div>
+
+          <!-- Quiz Alanı -->
+          <div id="quizArea" class="game-area hidden">
+            <div id="quizQuestion" class="quiz-question-box"></div>
+            <div id="quizOptions" class="quiz-options-grid"></div>
+            <div id="quizFeedback" class="game-feedback"></div>
+            <div id="quizScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="quizNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Match Alanı -->
+          <div id="matchArea" class="game-area hidden">
+            <div id="matchQuestion" class="match-question-box"></div>
+            <div id="matchOptions" class="quiz-options-grid"></div>
+            <div id="matchFeedback" class="game-feedback"></div>
+            <div id="matchScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="matchNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Count Alanı -->
+          <div id="countArea" class="game-area hidden">
+            <div id="countQuestion" class="quiz-question-box"></div>
+            <div id="countOptions" class="quiz-options-grid"></div>
+            <div id="countFeedback" class="game-feedback"></div>
+            <div id="countScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="countNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Hangman Alanı -->
+          <div id="hangmanArea" class="game-area hidden">
+            <div class="hangman-top">
+              <span id="hangmanFace" class="hangman-face">😄</span>
+              <span id="hangmanHaklar" class="hangman-haklar">6 hak</span>
+            </div>
+            <div id="hangmanWord" class="hangman-word"></div>
+            <div id="hangmanWrong" class="hangman-wrong"></div>
+            <div class="hangman-input-row">
+              <input type="text" id="hangmanInput" maxlength="1" placeholder="Harf" class="hangman-input" />
+              <button id="hangmanGuessBtn">Tahmin</button>
+            </div>
+            <div id="hangmanMsg" class="game-feedback"></div>
+            <div class="game-btns">
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Memory Alanı -->
+          <div id="memoryArea" class="game-area hidden">
+            <div class="memory-header">
+              <span id="memoryMoves" class="memory-moves">Hamle: 0</span>
+              <button id="memoryNewBtn" class="memory-new-btn">🔄 Yenisi</button>
+            </div>
+            <div id="memoryGrid" class="memory-grid"></div>
+            <div id="memoryResult" class="memory-result"></div>
+            <div class="game-btns">
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Ayet Sırala Alanı -->
+          <div id="orderArea" class="game-area hidden">
+            <div id="orderQuestion" class="quiz-question-box"></div>
+            <div id="orderWords" class="order-words-wrap"></div>
+            <div id="orderAnswer" class="order-answer-wrap"></div>
+            <div id="orderFeedback" class="game-feedback"></div>
+            <div id="orderScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="orderCheckBtn" class="quiz-opt-btn" style="background:#1e3a5f;color:#aee2ff">✅ Kontrol Et</button>
+              <button id="orderNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Sure Sırası Alanı -->
+          <div id="surahOrderArea" class="game-area hidden">
+            <div id="surahOrderQ" class="quiz-question-box"></div>
+            <div id="surahOrderOptions" class="quiz-options-grid"></div>
+            <div id="surahOrderFeedback" class="game-feedback"></div>
+            <div id="surahOrderScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="surahOrderNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Hızlı Bilgi Alanı -->
+          <div id="speedQuizArea" class="game-area hidden">
+            <div class="speed-timer-wrap">
+              <div id="speedTimerBar" class="speed-timer-bar"><div id="speedTimerFill" class="speed-timer-fill"></div></div>
+              <span id="speedTimerVal" class="speed-timer-val">10</span>
+            </div>
+            <div id="speedQuizQ" class="quiz-question-box"></div>
+            <div id="speedQuizOptions" class="quiz-options-grid"></div>
+            <div id="speedQuizFeedback" class="game-feedback"></div>
+            <div id="speedQuizScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="speedQuizNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Kelime Tamamla Alanı -->
+          <div id="wordCompleteArea" class="game-area hidden">
+            <div id="wcQuestion" class="quiz-question-box"></div>
+            <div id="wcHint" style="color:#94a3b8;font-size:0.82rem;text-align:center;margin-bottom:8px;font-family:sans-serif"></div>
+            <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">
+              <input type="text" id="wcInput" placeholder="Eksik kelimeyi yaz..." style="background:#1e293b;color:#e2e8f0;border:1.5px solid #334155;border-radius:10px;padding:0.5rem 0.9rem;font-size:0.95rem;width:220px;direction:ltr" />
+              <button id="wcCheckBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:0.5rem 1rem;font-weight:bold;cursor:pointer">✓</button>
+            </div>
+            <div id="wcFeedback" class="game-feedback"></div>
+            <div id="wcScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="wcNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- Doğru/Yanlış Alanı -->
+          <div id="trueFalseArea" class="game-area hidden">
+            <div id="tfQuestion" class="quiz-question-box"></div>
+            <div style="display:flex;gap:16px;justify-content:center;margin:12px 0">
+              <button id="tfTrueBtn" style="background:#064e3b;color:#6ee7b7;border:2px solid #6ee7b7;border-radius:14px;padding:12px 28px;font-size:1rem;cursor:pointer;font-family:sans-serif;font-weight:bold">✅ Doğru</button>
+              <button id="tfFalseBtn" style="background:#7f1d1d;color:#fca5a5;border:2px solid #fca5a5;border-radius:14px;padding:12px 28px;font-size:1rem;cursor:pointer;font-family:sans-serif;font-weight:bold">❌ Yanlış</button>
+            </div>
+            <div id="tfFeedback" class="game-feedback"></div>
+            <div id="tfScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="tfNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+          <!-- İlk Ayet Kim? Alanı -->
+          <div id="surahFirstArea" class="game-area hidden">
+            <div id="sfQuestion" class="quiz-question-box"></div>
+            <div id="sfOptions" class="quiz-options-grid"></div>
+            <div id="sfFeedback" class="game-feedback"></div>
+            <div id="sfScore" class="game-score"></div>
+            <div class="game-btns">
+              <button id="sfNextBtn" class="hidden">Sonraki ➡️</button>
+              <button class="game-back-btn">← Menüye Dön</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /dropdown-frame -->
+
+    <!-- ROZET PANELİ -->
+    <div id="badgePanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">🏅 Rozetler & İlerleme</h3>
+        <div id="badgeProgressBar" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:0.78rem;font-family:sans-serif;margin-bottom:4px">
+            <span>Sure Okuma İlerlemesi</span><span id="badgeSurahPct">0%</span>
+          </div>
+          <div style="background:#1e293b;border-radius:6px;height:8px;overflow:hidden">
+            <div id="badgeSurahFill" style="height:100%;background:linear-gradient(90deg,#f59e0b,#fcd34d);width:0%;transition:width 0.6s"></div>
+          </div>
+        </div>
+        <div id="badgeGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px"></div>
+      </div>
+    </div>
+
+    <!-- TAKVİM PANELİ -->
+    <div id="calendarPanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">📅 Dini Günler Takvimi</h3>
+        <div id="calendarContent"></div>
+      </div>
+    </div>
+
+    <!-- PAYLAŞ PANELİ -->
+    <div id="sharePanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">📤 Ayet Paylaş</h3>
+        <div id="shareVersePreview" style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:12px;text-align:center;min-height:60px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button id="shareWhatsApp" style="background:#25D366;color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.9rem;cursor:pointer;font-family:sans-serif;font-weight:bold">📱 WhatsApp</button>
+          <button id="shareTwitter" style="background:#1DA1F2;color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.9rem;cursor:pointer;font-family:sans-serif;font-weight:bold">🐦 Twitter/X</button>
+          <button id="shareTelegram" style="background:#0088cc;color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.9rem;cursor:pointer;font-family:sans-serif;font-weight:bold">✈️ Telegram</button>
+          <button id="shareCopy" style="background:#334155;color:#e2e8f0;border:none;border-radius:10px;padding:10px;font-size:0.9rem;cursor:pointer;font-family:sans-serif;font-weight:bold">📋 Kopyala</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAMAZ VAKİTLERİ PANELİ -->
+    <div id="prayerPanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">🕌 Namaz Vakitleri</h3>
+        <div id="prayerCityRow" style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="prayerCityInput" placeholder="Şehir (örn: Istanbul)" style="flex:1;background:#1e293b;color:#e2e8f0;border:1.5px solid #334155;border-radius:10px;padding:0.5rem 0.8rem;font-size:0.95rem" />
+          <button id="prayerSearchBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:0.5rem 1rem;font-weight:bold;cursor:pointer">Ara</button>
+        </div>
+        <div id="prayerTimes" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+        <div id="prayerNextInfo" style="margin-top:10px;text-align:center;color:#94a3b8;font-size:0.9rem"></div>
+      </div>
+    </div>
+
+    <!-- DUA PANELİ -->
+    <div id="duaPanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">🤲 Günlük Dualar</h3>
+        <div class="dua-tabs" id="duaTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+        <div id="duaContent" style="text-align:center"></div>
+      </div>
+    </div>
+
+    <!-- YER İMİ PANELİ -->
+    <div id="bookmarkPanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">🔖 Yer İmleri</h3>
+        <div id="bookmarkList" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="bookmarkEmpty" style="color:#475569;text-align:center;padding:1.5rem;font-family:sans-serif;font-size:0.9rem">Henüz yer imi yok.<br>Ayet üzerine uzun basarak ekleyebilirsin.</div>
+      </div>
+    </div>
+
+    <!-- AYET ARA PANELİ -->
+    <div id="searchVersePanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
+      <div class="extra-panel-inner">
+        <h3 class="panel-title">🔍 Meal İçinde Ara</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="verseSearchInput" placeholder="Türkçe kelime ara... (örn: sabır, rahmet)" style="flex:1;background:#1e293b;color:#e2e8f0;border:1.5px solid #334155;border-radius:10px;padding:0.5rem 0.8rem;font-size:0.9rem" />
+          <button id="verseSearchBtn" style="background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#000;border:none;border-radius:10px;padding:0.5rem 1rem;font-weight:bold;cursor:pointer">Ara</button>
+        </div>
+        <div id="verseSearchResults" style="max-height:300px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- GÜNÜN AYETİ -->
+    <div id="dailyVerseBox" class="daily-verse-box">
+      <div class="dv-header">🌟 Günün Ayeti</div>
+      <div id="dailyVerseArabic" class="dv-arabic"></div>
+      <div id="dailyVerseMeal" class="dv-meal"></div>
+      <div id="dailyVerseRef" class="dv-ref"></div>
     </div>
 
     <div id="verseContainer"></div>
@@ -40,8 +515,14 @@
       <h3>Türkçe Meal</h3>
       <div id="mealText"></div>
     </div>
+
   </main>
 
+  <!-- Kelime Tooltip -->
+  <div id="wordTooltip" class="word-tooltip hidden"></div>
+
+  <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
