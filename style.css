@@ -63,23 +63,29 @@ main {
   padding: 0 1rem;
 }
 
-/* 🔘 Tema Tuşu */
-.theme-toggle {
-  text-align: center;
-  margin-bottom: 1rem;
-}
+/* 🔘 Tema Tuşu — navbar içinde .navbar-icon-btn olarak */
+.theme-toggle { display: none; }
 
 #toggleTheme {
-  background-color: var(--accent);
-  color: var(--accent-dark);
-  border: none;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  border-radius: 30px;
-  cursor: pointer;
-  box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent)66;
-  transition: all 0.3s ease;
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  padding: 0 !important;
+  font-size: 1.1rem !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: all 0.18s !important;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
 }
+#toggleTheme:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: #e2e8f0 !important;
+  transform: scale(1.12) !important;
+}
+body.light #toggleTheme { color: #475569 !important; }
+body.light #toggleTheme:hover { background: rgba(0,80,180,0.09) !important; color: #0050b4 !important; }
 
 /* 🔽 Dropdown ve Tuşlar */
 .dropdown-frame {
@@ -1076,46 +1082,158 @@ body.light .ayah-end {
 /* ════════════════════════════════════════════════════════════
    🔑 SAĞ ÜST AUTH BAR
 ════════════════════════════════════════════════════════════ */
-.top-auth-bar {
-  position: fixed; top: 14px; right: 18px; z-index: 99990;
-  display: flex; align-items: center; gap: 8px;
+/* ═══════════════════════════════════════════════════════
+   🔝 ÜST NAVİGASYON ÇUBUĞU
+═══════════════════════════════════════════════════════ */
+.top-navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 99990;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(3, 14, 38, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(212,175,55,0.2);
+  box-shadow: 0 2px 24px rgba(0,0,0,0.6);
 }
-#topAuthButtons { display: flex; gap: 8px; }
+
+/* SOL — auth */
+.navbar-left  { display: flex; align-items: center; gap: 8px; }
+.navbar-auth-btns { display: flex; align-items: center; gap: 8px; }
+.navbar-user  { display: flex; align-items: center; gap: 8px; }
 
 .top-btn-login {
-  background: rgba(174,226,255,0.12) !important;
-  color: #aee2ff !important; border: 1.5px solid rgba(174,226,255,0.5) !important;
-  border-radius: 20px !important; padding: 0.38rem 1rem !important;
-  font-size: 0.82rem !important; font-family: sans-serif !important;
-  cursor: pointer !important; backdrop-filter: blur(6px);
-  transition: all 0.2s !important; margin: 0 !important; box-shadow: none !important;
+  background: rgba(174,226,255,0.1) !important;
+  color: #aee2ff !important;
+  border: 1.5px solid rgba(174,226,255,0.4) !important;
+  border-radius: 20px !important;
+  padding: 0.3rem 0.85rem !important;
+  font-size: 0.8rem !important;
+  font-family: sans-serif !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  margin: 0 !important;
+  white-space: nowrap;
 }
-.top-btn-login:hover { background: rgba(174,226,255,0.22) !important; }
+.top-btn-login:hover { background: rgba(174,226,255,0.2) !important; }
 
 .top-btn-register {
-  background: linear-gradient(135deg, #38bdf8, #aee2ff) !important;
-  color: #003366 !important; border: none !important; border-radius: 20px !important;
-  padding: 0.38rem 1rem !important; font-size: 0.82rem !important; font-weight: bold !important;
-  font-family: sans-serif !important; cursor: pointer !important;
-  box-shadow: 0 0 12px rgba(174,226,255,0.35) !important;
-  transition: all 0.2s !important; margin: 0 !important;
+  background: linear-gradient(135deg,#1a3a70,#38bdf8) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 20px !important;
+  padding: 0.3rem 0.85rem !important;
+  font-size: 0.8rem !important;
+  font-weight: bold !important;
+  font-family: sans-serif !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 10px rgba(56,189,248,0.3) !important;
+  transition: all 0.2s !important;
+  margin: 0 !important;
+  white-space: nowrap;
 }
 .top-btn-register:hover { transform: scale(1.05) !important; }
 
-#topUserInfo {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(0,0,0,0.35); border: 1px solid rgba(174,226,255,0.2);
-  border-radius: 20px; padding: 4px 10px 4px 12px; backdrop-filter: blur(6px);
-}
 .top-user-name {
   color: #aee2ff; font-size: 0.82rem; font-family: sans-serif;
-  white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
 }
 .top-btn-logout {
-  background: #7f1d1d !important; color: #fca5a5 !important; border: none !important;
-  border-radius: 14px !important; padding: 0.22rem 0.65rem !important;
-  font-size: 0.75rem !important; font-family: sans-serif !important;
-  cursor: pointer !important; margin: 0 !important; box-shadow: none !important;
+  background: rgba(127,29,29,0.8) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(252,165,165,0.3) !important;
+  border-radius: 14px !important;
+  padding: 0.2rem 0.6rem !important;
+  font-size: 0.74rem !important;
+  font-family: sans-serif !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+}
+
+/* ORTA — ikon butonlar */
+.navbar-center { display: flex; align-items: center; gap: 2px; }
+.navbar-icon-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  font-size: 1.1rem !important;
+  cursor: pointer !important;
+  width: 36px; height: 36px;
+  border-radius: 10px !important;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+.navbar-icon-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: #e2e8f0 !important;
+  transform: scale(1.12) !important;
+}
+
+/* SAĞ — logo */
+.navbar-right {
+  display: flex; align-items: center; gap: 8px;
+}
+.navbar-logo-icon {
+  font-size: 1.55rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(212,175,55,0.55));
+}
+.navbar-logo-text {
+  display: flex; flex-direction: column; align-items: flex-end; line-height: 1;
+}
+.navbar-logo-title {
+  font-family: 'Georgia', serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #d4af37;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 12px rgba(212,175,55,0.5);
+}
+.navbar-logo-sub {
+  font-family: sans-serif;
+  font-size: 0.6rem;
+  color: #64748b;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* main padding */
+main { padding-top: 64px !important; margin-top: 0 !important; }
+
+/* ══ BEYAZ MOD ══ */
+body.light .top-navbar {
+  background: rgba(255,255,255,0.97) !important;
+  border-bottom-color: rgba(0,80,180,0.15) !important;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.1) !important;
+}
+body.light .top-btn-login {
+  color: #0050b4 !important;
+  border-color: rgba(0,80,180,0.35) !important;
+  background: rgba(0,80,180,0.07) !important;
+}
+body.light .top-btn-register {
+  background: linear-gradient(135deg,#0050b4,#38bdf8) !important;
+  color: #fff !important;
+}
+body.light .top-user-name  { color: #003366 !important; }
+body.light .navbar-icon-btn { color: #475569 !important; }
+body.light .navbar-icon-btn:hover { background: rgba(0,80,180,0.09) !important; color: #0050b4 !important; }
+body.light .navbar-logo-title { color: #0050b4 !important; text-shadow: none !important; }
+body.light .navbar-logo-sub   { color: #94a3b8 !important; }
+
+/* Mobil */
+@media (max-width: 480px) {
+  .navbar-logo-title { font-size: 0.78rem; }
+  .navbar-logo-sub   { display: none; }
+  .navbar-icon-btn   { width: 30px !important; height: 30px !important; font-size: 1rem !important; }
+  .top-btn-login, .top-btn-register { padding: 0.25rem 0.55rem !important; font-size: 0.72rem !important; }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1123,6 +1241,7 @@ body.light .ayah-end {
 ════════════════════════════════════════════════════════════ */
 .auth-modal-overlay {
   position: fixed; inset: 0; z-index: 999990;
+
   background: rgba(0,0,0,0.78); backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center; padding: 1rem;
 }
@@ -1363,8 +1482,6 @@ body.light .ayah-end {
 
 /* Mobil */
 @media (max-width: 600px) {
-  .top-auth-bar { top: 8px; right: 8px; }
-  .top-btn-login, .top-btn-register { padding: 0.3rem 0.7rem !important; font-size: 0.75rem !important; }
   .top-user-name { max-width: 90px; font-size: 0.75rem; }
   .auth-box { padding: 1.8rem 1.2rem; }
   .quiz-options-grid { grid-template-columns: 1fr; }
@@ -2022,3 +2139,259 @@ body.light .lb-name { color: #1a0a00; }
 @keyframes confettiFall {
   to { top: 105vh; transform: rotate(720deg) translateX(50px); opacity: 0; }
 }
+
+/* ══════════ QP MODAL OVERLAY ══════════ */
+.qp-modal-overlay {
+  position:fixed !important; inset:0 !important; z-index:999990 !important;
+  background:rgba(0,0,0,0.82) !important; backdrop-filter:blur(8px) !important;
+  display:flex !important; align-items:center !important; justify-content:center !important; padding:1rem !important;
+}
+.qp-modal-overlay.hidden { display:none !important; }
+.qp-modal-box {
+  background:#0d1b2e; border:2px solid rgba(56,189,248,0.3); border-radius:20px;
+  width:100%; max-width:620px; max-height:88vh; display:flex; flex-direction:column;
+  overflow:hidden; box-shadow:0 0 60px rgba(56,189,248,0.1),0 30px 80px rgba(0,0,0,0.8);
+  animation:qpSlide 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+.qp-modal-wide { max-width:860px !important; }
+@keyframes qpSlide {
+  from{opacity:0;transform:scale(0.9) translateY(20px);}
+  to{opacity:1;transform:scale(1) translateY(0);}
+}
+.qp-modal-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; border-bottom:1px solid rgba(56,189,248,0.12);
+  background:rgba(56,189,248,0.05); flex-shrink:0;
+}
+.qp-modal-title { color:#38bdf8; font-family:sans-serif; font-weight:700; font-size:0.95rem; }
+.qp-modal-close {
+  background:rgba(239,68,68,0.15); color:#fca5a5; border:1px solid rgba(239,68,68,0.3);
+  border-radius:50%; width:30px; height:30px; cursor:pointer; font-size:0.82rem;
+  display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0;
+}
+.qp-modal-close:hover { background:rgba(239,68,68,0.4); transform:scale(1.12); }
+.qp-modal-body { overflow-y:auto; padding:16px 18px; flex:1; direction:ltr; font-family:sans-serif; }
+.qp-modal-body::-webkit-scrollbar{width:4px;}
+.qp-modal-body::-webkit-scrollbar-thumb{background:rgba(56,189,248,0.25);border-radius:4px;}
+body.light .qp-modal-box{background:#f0f6ff;border-color:rgba(0,80,180,0.25);}
+body.light .qp-modal-header{background:rgba(0,80,180,0.05);border-color:rgba(0,80,180,0.1);}
+body.light .qp-modal-title{color:#0050b4;}
+body.light .qp-modal-close{color:#cc2200;background:rgba(200,50,50,0.1);border-color:rgba(200,50,50,0.2);}
+
+/* Meal satırı tefsir butonu */
+.ayah-tefsir-btn {
+  display:inline-flex; align-items:center; flex-shrink:0;
+  background:rgba(212,175,55,0.12); color:#d4af37;
+  border:1px solid rgba(212,175,55,0.3); border-radius:8px;
+  padding:2px 7px; font-size:0.67rem; font-family:sans-serif;
+  cursor:pointer; transition:all 0.2s; white-space:nowrap; direction:ltr; margin-top:1px;
+}
+.ayah-tefsir-btn:hover{background:rgba(212,175,55,0.28);border-color:#d4af37;}
+
+/* ══════════════════════════════════════════
+   📅 İSLAMİ TAKVİM GRİD
+══════════════════════════════════════════ */
+.qcal-wrap { font-family: sans-serif; direction: ltr; }
+.qcal-hijri-today {
+  background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.25);
+  border-radius: 10px; padding: 8px 14px; color: #d4af37;
+  font-size: 0.82rem; font-weight: 600; text-align: center; margin-bottom: 14px;
+}
+.qcal-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.qcal-nav-btn {
+  background: rgba(56,189,248,0.1); color: #38bdf8;
+  border: 1px solid rgba(56,189,248,0.25); border-radius: 8px;
+  width: 32px; height: 32px; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.qcal-nav-btn:hover { background: rgba(56,189,248,0.22); }
+.qcal-nav-title { color: #e2e8f0; font-weight: 700; font-size: 1rem; }
+
+.qcal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 3px; margin-bottom: 14px;
+}
+.qcal-head {
+  color: #64748b; font-size: 0.68rem; text-align: center;
+  padding: 4px 0; font-weight: 600; text-transform: uppercase;
+}
+.qcal-cell {
+  aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; cursor: pointer;
+  transition: all 0.15s; position: relative; padding: 2px;
+  background: rgba(255,255,255,0.03); border: 1px solid transparent;
+}
+.qcal-cell:hover { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.2); }
+.qcal-cell.qcal-empty { background: transparent; cursor: default; }
+.qcal-cell.qcal-today {
+  background: rgba(56,189,248,0.18) !important;
+  border: 2px solid #38bdf8 !important;
+}
+.qcal-cell.qcal-fest { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); }
+.qcal-cell.qcal-kandil { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.25); }
+.qcal-cell.qcal-moon { background: rgba(110,231,183,0.1); border-color: rgba(110,231,183,0.25); }
+.qcal-num { color: #e2e8f0; font-size: 0.8rem; font-weight: 500; line-height: 1; }
+.qcal-today .qcal-num { color: #38bdf8; font-weight: 800; }
+.qcal-dots { display: flex; gap: 2px; margin-top: 2px; }
+.qcal-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+.qcal-day-detail {
+  background: rgba(30,41,59,0.9); border: 1px solid rgba(56,189,248,0.15);
+  border-radius: 12px; padding: 12px; margin-bottom: 14px;
+  animation: qpSlide 0.2s ease;
+}
+.qcal-day-detail.hidden { display: none; }
+
+.qcal-section-title {
+  color: #f59e0b; font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+}
+.qcal-ev-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.qcal-ev-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.06);
+  border-left: 3px solid #f59e0b; border-radius: 10px; padding: 9px 12px;
+  transition: all 0.2s;
+}
+.qcal-ev-row:hover { background: rgba(30,41,59,1); }
+.qcal-ev-icon { font-size: 1.3rem; flex-shrink: 0; }
+.qcal-ev-info { flex: 1; min-width: 0; }
+.qcal-ev-name { color: #e2e8f0; font-size: 0.85rem; font-weight: 600; }
+.qcal-ev-date { color: #64748b; font-size: 0.72rem; margin-top: 2px; }
+.qcal-ev-diff { font-size: 0.72rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.qcal-source { color: #334155; font-size: 0.68rem; text-align: center; padding-top: 8px; border-top: 1px solid #1e293b; }
+
+body.light .qcal-cell { background: rgba(0,0,0,0.03); }
+body.light .qcal-cell:hover { background: rgba(0,80,180,0.08); border-color: rgba(0,80,180,0.2); }
+body.light .qcal-today { background: rgba(0,80,180,0.15) !important; border-color: #0050b4 !important; }
+body.light .qcal-today .qcal-num { color: #0050b4; }
+body.light .qcal-num { color: #1a2a4a; }
+body.light .qcal-head { color: #64748b; }
+body.light .qcal-ev-row { background: rgba(240,246,255,0.9); border-color: rgba(0,0,0,0.06); }
+body.light .qcal-ev-name { color: #1a2a4a; }
+
+/* ═══════════════════════════════════════
+   📜 MEAL SATIRINDA TEFSİR BUTONU
+═══════════════════════════════════════ */
+.meal-item-v15 {
+  position: relative;
+}
+.meal-tefsir-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+  background: rgba(212,175,55,0.10);
+  color: #d4af37;
+  border: 1px solid rgba(212,175,55,0.25);
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-family: sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+.meal-tefsir-btn:hover {
+  background: rgba(212,175,55,0.25);
+  border-color: rgba(212,175,55,0.6);
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(212,175,55,0.2);
+}
+.meal-tefsir-btn:active { transform: scale(0.95); }
+body.light .meal-tefsir-btn { background: rgba(212,175,55,0.08); color: #b8860b; border-color: rgba(184,134,11,0.3); }
+
+/* ═══════════════════════════════════════════════════════
+   📜 INLINE TEFSİR KUTUSU — Meal satırı altında
+═══════════════════════════════════════════════════════ */
+.meal-tefsir-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(212,175,55,0.1);
+  border: 1px solid rgba(212,175,55,0.25);
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  color: #d4af37;
+  cursor: pointer;
+  margin-left: 8px;
+  flex-shrink: 0;
+  transition: all 0.18s;
+  font-family: sans-serif;
+  white-space: nowrap;
+}
+.meal-tefsir-btn:hover {
+  background: rgba(212,175,55,0.22);
+  border-color: rgba(212,175,55,0.5);
+  transform: scale(1.05);
+}
+.meal-tefsir-btn.active {
+  background: rgba(212,175,55,0.2);
+  border-color: #d4af37;
+  color: #fcd34d;
+}
+
+.inline-tefsir-box {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease;
+  margin: 0 0 6px 0;
+  background: linear-gradient(135deg, rgba(10,20,45,0.95), rgba(15,25,50,0.95));
+  border-left: 3px solid #d4af37;
+  border-radius: 0 12px 12px 0;
+  padding: 0;
+}
+.inline-tefsir-box .itb-header {
+  font-family: sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #d4af37;
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid rgba(212,175,55,0.15);
+}
+.inline-tefsir-box .itb-text {
+  font-family: sans-serif;
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.85;
+  padding: 10px 14px;
+  text-align: justify;
+  direction: ltr;
+}
+.inline-tefsir-box .itb-empty {
+  font-family: sans-serif;
+  font-size: 0.82rem;
+  color: #64748b;
+  padding: 12px 14px;
+  text-align: center;
+  line-height: 1.7;
+}
+.inline-tefsir-box .itb-empty span {
+  font-size: 0.72rem;
+  color: #475569;
+}
+.inline-tefsir-box .itb-source {
+  font-size: 0.68rem;
+  color: #334155;
+  padding: 4px 14px 10px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+/* Light mode */
+body.light .inline-tefsir-box {
+  background: linear-gradient(135deg, rgba(235,242,255,0.98), rgba(240,246,255,0.98));
+}
+body.light .itb-text { color: #1a2a4a; }
+body.light .itb-header { color: #0050b4; }
+body.light .meal-tefsir-btn { color: #0050b4; border-color: rgba(0,80,180,0.3); background: rgba(0,80,180,0.08); }
+body.light .meal-tefsir-btn.active { background: rgba(0,80,180,0.15); border-color: #0050b4; }
