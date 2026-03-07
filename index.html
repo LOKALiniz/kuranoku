@@ -37,18 +37,37 @@
   </video>
 
   <!-- ═══════════════════════════════════════════
-       SAĞ ÜST AUTH BAR
+       ÜST NAVİGASYON ÇUBUĞU
   ═══════════════════════════════════════════ -->
-  <div id="topAuthBar" class="top-auth-bar">
-    <div id="topAuthButtons">
-      <button id="topLoginBtn" class="top-btn-login">🔑 Giriş Yap</button>
-      <button id="topRegisterBtn" class="top-btn-register">✨ Kayıt Ol</button>
+  <header id="topNavbar" class="top-navbar">
+    <!-- SOL: Auth butonları -->
+    <div class="navbar-left">
+      <div id="topAuthButtons" class="navbar-auth-btns">
+        <button id="topLoginBtn" class="top-btn-login">🔑 Giriş Yap</button>
+        <button id="topRegisterBtn" class="top-btn-register">✨ Kayıt Ol</button>
+      </div>
+      <div id="topUserInfo" class="navbar-user hidden">
+        <span id="topUserName" class="top-user-name">👤</span>
+        <button id="topLogoutBtn" class="top-btn-logout">Çıkış</button>
+      </div>
     </div>
-    <div id="topUserInfo" class="hidden">
-      <span id="topUserName" class="top-user-name">👤</span>
-      <button id="topLogoutBtn" class="top-btn-logout">Çıkış</button>
+
+    <!-- ORTA: Tema + Ayarlar -->
+    <div class="navbar-center">
+      <button id="toggleTheme" class="navbar-icon-btn" title="Tema Değiştir">🌙</button>
+      <button id="navSettingsBtn" class="navbar-icon-btn" title="Ayarlar">⚙️</button>
+      <button id="navProfileBtn" class="navbar-icon-btn" title="Profil">👤</button>
     </div>
-  </div>
+
+    <!-- SAĞ: Logo -->
+    <div class="navbar-right">
+      <span class="navbar-logo-icon">🕋</span>
+      <div class="navbar-logo-text">
+        <span class="navbar-logo-title">Kur'an-ı Kerim</span>
+        <span class="navbar-logo-sub">Oku &amp; Dinle</span>
+      </div>
+    </div>
+  </header>
 
   <!-- ═══════════════════════════════════════════
        AUTH MODAL
@@ -82,10 +101,6 @@
        ANA UYGULAMA
   ═══════════════════════════════════════════ -->
   <main>
-    <div class="theme-toggle">
-      <button id="toggleTheme">🌙 Tema Değiştir</button>
-    </div>
-
     <div class="dropdown-frame">
       <div class="search-section">
         <input type="text" id="surahSearch" placeholder="Sure (Örn: Bakara)">
@@ -443,12 +458,7 @@
     </div>
 
     <!-- TAKVİM PANELİ -->
-    <div id="calendarPanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
-      <div class="extra-panel-inner">
-        <h3 class="panel-title">📅 Dini Günler Takvimi</h3>
-        <div id="calendarContent"></div>
-      </div>
-    </div>
+    <!-- TAKVİM MODAL (fixed, ekran ortası) →  script.js'deki _openModal ile açılır -->
 
     <!-- PAYLAŞ PANELİ -->
     <div id="sharePanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
@@ -604,56 +614,47 @@
     </div><!-- /bubbleGrid -->
   </div><!-- /bubbleMenu -->
 
-  <!-- ═══════════════ TEFSİR PANELİ ═══════════════ -->
-  <div id="tefsirPanel" class="extra-panel hidden">
-    <div class="extra-panel-inner">
-      <div class="panel-title">📜 Tefsir <button class="panel-close" onclick="App._togglePanel('tefsirPanel')">✕</button></div>
-      <div id="tefsirContent" style="padding:12px"></div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ ESMAÜL HÜSNA PANELİ ═══════════════ -->
-  <div id="esmaPanel" class="extra-panel hidden">
-    <div class="extra-panel-inner">
-      <div class="panel-title">✨ Esmaül Hüsna — Allah'ın 99 İsmi <button class="panel-close" onclick="App._togglePanel('esmaPanel')">✕</button></div>
-      <div id="esmaContent" style="padding:12px"></div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ LİDERLİK TABLOSU ═══════════════ -->
-  <div id="leaderboardPanel" class="extra-panel hidden">
-    <div class="extra-panel-inner">
-      <div class="panel-title">🏆 Liderlik Tablosu <button class="panel-close" onclick="App._togglePanel('leaderboardPanel')">✕</button></div>
-      <div id="leaderboardContent" style="padding:12px"></div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ HATİM GRUBU ═══════════════ -->
-  <div id="hatimPanel" class="extra-panel hidden">
-    <div class="extra-panel-inner">
-      <div class="panel-title">👥 Hatim Grubu <button class="panel-close" onclick="App._togglePanel('hatimPanel')">✕</button></div>
-      <div id="hatimContent" style="padding:12px"></div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ BİLDİRİM PANELİ ═══════════════ -->
-  <div id="notifPanel" class="extra-panel hidden">
-    <div class="extra-panel-inner">
-      <div class="panel-title">🔔 Hatırlatıcı Bildirimi <button class="panel-close" onclick="App._togglePanel('notifPanel')">✕</button></div>
-      <div id="notifContent" style="padding:12px"></div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ ÇEVRİMDIŞI MOD PANELİ ═══════════════ -->
-  <div id="offlinePanel" class="extra-panel hidden">
-    <div class="extra-panel-inner">
-      <div class="panel-title">🔇 Çevrimdışı Mod <button class="panel-close" onclick="App._togglePanel('offlinePanel')">✕</button></div>
-      <div id="offlineContent" style="padding:12px"></div>
-    </div>
-  </div>
+  <!-- ═══ MODAL PANELLERİ (fixed, ekran ortası) ═══ -->
+  <div id="tefsirOverlay"      class="qp-modal-overlay hidden"><div class="qp-modal-box"><div class="qp-modal-header"><span class="qp-modal-title" id="tefsirModalTitle">📜 Tefsir</span><button class="qp-modal-close" onclick="App._closeModal('tefsirOverlay')">✕</button></div><div class="qp-modal-body" id="tefsirContent"></div></div></div>
+  <div id="esmaOverlay"        class="qp-modal-overlay hidden"><div class="qp-modal-box qp-modal-wide"><div class="qp-modal-header"><span class="qp-modal-title">✨ Esmaül Hüsna</span><button class="qp-modal-close" onclick="App._closeModal('esmaOverlay')">✕</button></div><div class="qp-modal-body" id="esmaContent"></div></div></div>
+  <div id="leaderboardOverlay" class="qp-modal-overlay hidden"><div class="qp-modal-box"><div class="qp-modal-header"><span class="qp-modal-title">🏆 Liderlik Tablosu</span><button class="qp-modal-close" onclick="App._closeModal('leaderboardOverlay')">✕</button></div><div class="qp-modal-body" id="leaderboardContent"></div></div></div>
+  <div id="hatimOverlay"       class="qp-modal-overlay hidden"><div class="qp-modal-box"><div class="qp-modal-header"><span class="qp-modal-title">👥 Hatim Grubu</span><button class="qp-modal-close" onclick="App._closeModal('hatimOverlay')">✕</button></div><div class="qp-modal-body" id="hatimContent"></div></div></div>
+  <div id="notifOverlay"       class="qp-modal-overlay hidden"><div class="qp-modal-box"><div class="qp-modal-header"><span class="qp-modal-title">🔔 Bildirimler</span><button class="qp-modal-close" onclick="App._closeModal('notifOverlay')">✕</button></div><div class="qp-modal-body" id="notifContent"></div></div></div>
+  <div id="offlineOverlay"     class="qp-modal-overlay hidden"><div class="qp-modal-box"><div class="qp-modal-header"><span class="qp-modal-title">🔇 Çevrimdışı Mod</span><button class="qp-modal-close" onclick="App._closeModal('offlineOverlay')">✕</button></div><div class="qp-modal-body" id="offlineContent"></div></div></div>
+  <div id="calendarOverlay"    class="qp-modal-overlay hidden"><div class="qp-modal-box qp-modal-wide"><div class="qp-modal-header"><span class="qp-modal-title">📅 İslami Takvim</span><button class="qp-modal-close" onclick="App._closeModal('calendarOverlay')">✕</button></div><div class="qp-modal-body" id="calendarContent"></div></div></div>
 
   <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
   <script src="admin.js"></script>
+  <script>
+    // Navbar butonları — bubble menüyü açıp ilgili sayfaya yönlendir
+    function _navOpenBubblePage(page) {
+      const trigger = document.getElementById('bubbleTrigger');
+      const grid    = document.getElementById('bubbleGrid');
+      const track   = document.getElementById('bubblePagesTrack');
+      const dots    = document.querySelectorAll('.bubble-dot');
+      if (!trigger || !grid || !track) return;
+      // Kapalıysa aç
+      if (grid.classList.contains('hidden')) trigger.click();
+      // Sayfaya git
+      setTimeout(() => {
+        const pct = (page - 1) * (100 / 3);
+        track.style.transform = `translateX(-${pct}%)`;
+        dots.forEach((d, i) => d.classList.toggle('active', i + 1 === page));
+      }, 60);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      // Ayarlar → bubble sayfa 2 (Ayarlar butonu orada)
+      document.getElementById('navSettingsBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _navOpenBubblePage(2);
+      });
+      // Profil → bubble sayfa 2 (Profil butonu orada)
+      document.getElementById('navProfileBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _navOpenBubblePage(2);
+      });
+    });
+  </script>
 </body>
 </html>
