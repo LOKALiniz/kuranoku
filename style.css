@@ -44,17 +44,17 @@ body {
 
 #bgVideo {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
   object-fit: cover;
   z-index: -1;
   opacity: 0.5;
 }
+body.light #bgVideo { opacity: 0.3; }
 
-body.light #bgVideo {
-  opacity: 0.;
+/* Telefonda video kapalı — düz renk */
+@media (max-width: 768px) {
+  #bgVideo { display: none; }
 }
 
 main {
@@ -1497,4 +1497,525 @@ body.light .ayah-end {
   .button-group button .btn-label {
     font-size: 0.62rem !important;
   }
+}
+
+/* ══════════════════════════════════════════
+   FLOATING BUBBLE MENÜ
+══════════════════════════════════════════ */
+.bubble-menu {
+  position: fixed;
+  bottom: 28px;
+  right: 24px;
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  user-select: none;
+  touch-action: none;
+}
+
+/* Ana tetikleyici top */
+.bubble-trigger {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a5f, #0ea5e9);
+  border: 2px solid rgba(174,226,255,0.35);
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(14,165,233,0.45);
+  transition: all 0.25s cubic-bezier(.4,0,.2,1);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+}
+.bubble-trigger:hover {
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 6px 28px rgba(14,165,233,0.6);
+}
+.bubble-trigger.open {
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #7f1d1d, #ef4444);
+  box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+}
+
+/* Açılan grid kutusu */
+.bubble-grid {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  transform-origin: bottom right;
+  /* Ekrandan taşmasın */
+  max-width: calc(100vw - 32px);
+}
+.bubble-grid.hidden {
+  display: none;
+}
+.bubble-grid-inner {
+  background: rgba(15, 23, 42, 0.97);
+  border: 1.5px solid rgba(174,226,255,0.2);
+  border-radius: 20px;
+  padding: 12px;
+  width: min(320px, calc(100vw - 32px));
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  backdrop-filter: blur(16px);
+  animation: bubbleOpen 0.22s cubic-bezier(.4,0,.2,1);
+}
+@keyframes bubbleOpen {
+  from { opacity: 0; transform: scale(0.85) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.bubble-grid-title {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: sans-serif;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+
+.bubble-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 3px 6px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 56px;
+  box-sizing: border-box;
+  color: #111;
+}
+.bubble-btn:hover {
+  background: #f0f9ff;
+  border-color: #0ea5e9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14,165,233,0.25);
+}
+.bubble-btn:active { transform: scale(0.93); }
+.bubble-btn-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  display: block;
+}
+.bubble-btn-label {
+  font-size: 0.65rem;
+  color: #111;
+  font-family: sans-serif;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+  width: 100%;
+  display: block;
+}
+.bubble-btn:hover .bubble-btn-label {
+  color: #0369a1;
+}
+
+/* ══════════════════════════════════════════
+   LIGHT THEME — YAZILARIN SİYAH OLMASI
+══════════════════════════════════════════ */
+body.light .bubble-grid-inner {
+  background: rgba(240, 237, 232, 0.97);
+  border-color: rgba(0,0,0,0.12);
+}
+body.light .bubble-grid-title {
+  color: #555;
+}
+body.light .bubble-btn {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.12);
+}
+body.light .bubble-btn:hover {
+  background: #fff;
+  border-color: #1a120b;
+}
+/* Baloncuk içi tüm yazılar siyah */
+body.light .bubble-btn-label {
+  color: #111 !important;
+}
+body.light .bubble-btn:hover .bubble-btn-label {
+  color: #000 !important;
+}
+body.light .bubble-trigger {
+  background: linear-gradient(135deg, #1a120b, #3e2c1c);
+  border-color: rgba(0,0,0,0.2);
+}
+
+/* Light tema genel yazı düzeltmeleri */
+body.light .extra-panel-inner,
+body.light .hifz-panel-inner {
+  color: #1a120b;
+}
+body.light .panel-title,
+body.light .hifz-title {
+  color: #1a120b !important;
+}
+body.light .game-feedback,
+body.light .game-score,
+body.light .quiz-question-box,
+body.light .quiz-sub {
+  color: #1a120b;
+}
+body.light .quiz-opt-btn {
+  background: #e8e2d9;
+  color: #1a120b;
+  border-color: #c8b99a;
+}
+body.light .quiz-opt-btn:hover {
+  background: #d4c9b8;
+}
+body.light .zikr-display #zikrArabic,
+body.light #zikrCount {
+  color: #1a120b;
+}
+body.light .adm-card-val,
+body.light .adm-card-label,
+body.light .adm-section-title {
+  color: #1a120b;
+}
+/* Günün ayeti — rengi KESİNLİKLE değişmesin */
+body.light .daily-verse-box { background: linear-gradient(135deg, #1a2744, #0f1e35) !important; }
+body.light .dv-header { color: #aee2ff !important; }
+body.light .dv-arabic { color: #fff !important; }
+body.light .dv-meal  { color: #94a3b8 !important; }
+body.light .dv-ref   { color: #d4af37 !important; }
+
+body.light .ayah-unit-v15 .ayah-text-v15 {
+  color: #1a120b;
+}
+body.light .surah-number-v15 {
+  color: #5a3e1b;
+}
+body.light .dropdown-frame {
+  background: rgba(240,235,228,0.92);
+}
+body.light .setting-item label,
+body.light .settings-bar {
+  color: #333;
+}
+body.light #fontSizeVal,
+body.light #speedVal {
+  color: #1a120b;
+}
+
+/* ══════════════════════════════════════════
+   MOBİL: SATIR BAŞINA EN AZ 2 AYET
+══════════════════════════════════════════ */
+@media (max-width: 600px) {
+  /* Ekran genişliğine göre font otomatik küçülsün, 2 ayet sığsın */
+  .mushaf-grid-v15 {
+    font-size: clamp(1.1rem, 5vw, 2rem) !important;
+    line-height: 3 !important;
+  }
+  .bismillah-v15 {
+    font-size: clamp(1.3rem, 6vw, 2.2rem) !important;
+  }
+  .ayah-ornament-v15 {
+    font-size: clamp(0.9rem, 3.5vw, 1.5rem) !important;
+    margin: 0 6px !important;
+  }
+  .mushaf-card-v15 {
+    padding: 1rem !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .mushaf-grid-v15 {
+    font-size: clamp(0.95rem, 4.5vw, 1.6rem) !important;
+    line-height: 2.8 !important;
+  }
+}
+
+
+
+/* BİSMİLLAH KESİN GÖRÜNÜR */
+.bismillah-v15 {
+  color: #b8860b !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15) !important;
+}
+body.light .bismillah-v15 {
+  color: #7a5500 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════
+   BUBBLE MENÜ — 3x3 SAYFALAMA
+══════════════════════════════════════════ */
+
+/* Sayfa nav: başlık + noktalar */
+.bubble-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  direction: ltr;
+}
+.bubble-grid-title {
+  font-size: 0.68rem !important;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-family: sans-serif;
+  margin: 0 !important;
+}
+body.light .bubble-grid-title { color: #666 !important; }
+
+/* Nokta indikatörleri */
+.bubble-dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.bubble-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(148,163,184,0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: block;
+}
+.bubble-dot.active {
+  background: #0ea5e9;
+  box-shadow: 0 0 6px rgba(14,165,233,0.6);
+  width: 18px;
+  border-radius: 4px;
+}
+
+/* Kaydırma sarmalayıcı */
+.bubble-pages-wrapper {
+  overflow: hidden;
+  width: 100%;
+  direction: ltr;
+}
+
+/* İç track - 3 sayfa yan yana */
+.bubble-pages-track {
+  display: flex;
+  width: 300%;
+  transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+  direction: ltr;
+}
+
+/* Her sayfa: 3x3 grid */
+.bubble-page {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  width: 33.333%;
+  flex-shrink: 0;
+  direction: ltr;
+  box-sizing: border-box;
+}
+
+/* Buton override: 3x3 için biraz daha büyük */
+.bubble-btn {
+  min-height: 62px !important;
+  padding: 9px 4px 7px !important;
+}
+.bubble-btn-icon {
+  font-size: 1.45rem !important;
+}
+.bubble-btn-label {
+  font-size: 0.62rem !important;
+}
+
+/* Grid inner: sabit genişlik */
+.bubble-grid-inner {
+  width: min(240px, calc(100vw - 40px)) !important;
+  overflow: hidden !important;
+  direction: ltr;
+}
+
+/* Mobil küçük ekran */
+@media (max-width: 380px) {
+  .bubble-grid-inner { width: min(210px, calc(100vw - 32px)) !important; }
+  .bubble-btn { min-height: 54px !important; }
+  .bubble-btn-icon { font-size: 1.2rem !important; }
+  .bubble-btn-label { font-size: 0.56rem !important; }
+}
+
+/* ══════════════════════════════════════════
+   🎤 KARAOKE — KELIME VURGULAMA
+══════════════════════════════════════════ */
+.ayah-word {
+  display: inline;
+  border-radius: 6px;
+  padding: 2px 3px;
+  transition: background 0.15s, color 0.15s, text-shadow 0.15s;
+  cursor: default;
+}
+
+/* Aktif kelime — parlak altın */
+.ayah-word.karaoke-active {
+  background: rgba(212, 175, 55, 0.3);
+  color: #ffd700 !important;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 24px rgba(255, 215, 0, 0.4);
+  border-radius: 8px;
+  padding: 2px 5px;
+}
+
+/* Geçmiş kelimeler — soluk */
+.ayah-word.karaoke-done {
+  color: rgba(241, 232, 213, 0.45) !important;
+}
+
+/* Light tema */
+body.light .ayah-word.karaoke-active {
+  background: rgba(180, 120, 0, 0.15);
+  color: #7a4f00 !important;
+  text-shadow: 0 0 8px rgba(180, 120, 0, 0.5);
+}
+body.light .ayah-word.karaoke-done {
+  color: rgba(30, 20, 10, 0.35) !important;
+}
+
+/* ══════════════════════════════════════════
+   🎤 KARAOKE — KELİME VURGULAMA
+══════════════════════════════════════════ */
+.ayah-word {
+  display: inline;
+  transition: color 0.12s, text-shadow 0.12s, background 0.12s;
+  border-radius: 4px;
+  padding: 0 1px;
+}
+.karaoke-active {
+  color: #d4af37 !important;
+  text-shadow: 0 0 18px rgba(212,175,55,0.8), 0 0 4px rgba(212,175,55,0.5) !important;
+  background: rgba(212,175,55,0.12) !important;
+  border-radius: 6px !important;
+  padding: 0 3px !important;
+}
+.karaoke-past {
+  color: rgba(241,232,213,0.45) !important;
+  text-shadow: none !important;
+}
+body.light .karaoke-past {
+  color: rgba(26,10,0,0.35) !important;
+}
+body.light .karaoke-active {
+  color: #7a4f00 !important;
+  text-shadow: 0 0 12px rgba(122,79,0,0.4) !important;
+  background: rgba(212,175,55,0.2) !important;
+}
+
+/* Karaoke toggle butonu */
+#karaokeToggleBtn {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  z-index: 9989;
+  background: rgba(15,23,42,0.92);
+  border: 1.5px solid rgba(212,175,55,0.3);
+  color: #94a3b8;
+  font-family: sans-serif;
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+#karaokeToggleBtn:hover {
+  border-color: #d4af37;
+  color: #d4af37;
+}
+@media (max-width: 768px) {
+  #karaokeToggleBtn { bottom: 100px; right: 16px; font-size: 0.7rem; padding: 5px 10px; }
+}
+
+/* ══════════════════════════════════════════
+   📖 TEFSİR + YENİ PANELLER
+══════════════════════════════════════════ */
+#tefsirPanel .extra-panel-inner,
+#esmaPanel .extra-panel-inner,
+#leaderboardPanel .extra-panel-inner,
+#hatimPanel .extra-panel-inner,
+#notifPanel .extra-panel-inner {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* ══════════════════════════════════════════
+   ✨ ESMAÜL HÜSNA KARTLARI
+══════════════════════════════════════════ */
+.esma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  direction: rtl;
+}
+.esma-card {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 12px;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  perspective: 600px;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.esma-card:hover { border-color: #d4af37; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
+.esma-front, .esma-back {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%; text-align: center;
+  transition: opacity 0.3s;
+}
+.esma-back { display: none; }
+.esma-card.esma-flipped .esma-front { display: none; }
+.esma-card.esma-flipped .esma-back { display: flex; }
+.esma-num { color: #475569; font-size: 0.62rem; font-family: sans-serif; margin-bottom: 2px; }
+.esma-arabic { color: #d4af37; font-size: 1rem; font-family: 'Amiri Quran', serif; line-height: 1.4; }
+.esma-name { color: #e2e8f0; font-size: 0.62rem; font-family: sans-serif; margin-top: 3px; direction: ltr; }
+.esma-meaning { color: #94a3b8; font-size: 0.68rem; font-family: sans-serif; direction: ltr; line-height: 1.5; padding: 4px; }
+body.light .esma-card { background: linear-gradient(135deg, #f0ead6, #e8dcc8); }
+body.light .esma-arabic { color: #7a4f00; }
+body.light .esma-name, body.light .esma-meaning { color: #333; }
+
+/* ══════════════════════════════════════════
+   🏆 LİDERLİK TABLOSU
+══════════════════════════════════════════ */
+.lb-list { direction: ltr; }
+.lb-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  font-family: sans-serif;
+  font-size: 0.82rem;
+}
+.lb-top { background: linear-gradient(135deg, #1e2a1e, #0f2010); border-color: rgba(212,175,55,0.4); }
+.lb-rank { font-size: 1.1rem; min-width: 32px; }
+.lb-name { color: #e2e8f0; flex: 1; font-weight: 500; }
+.lb-score { color: #d4af37; font-weight: bold; }
+.lb-surahs { color: #64748b; font-size: 0.72rem; }
+body.light .lb-row { background: #f0ead6; border-color: #d4c9a8; }
+body.light .lb-name { color: #1a0a00; }
+
+/* ══════════════════════════════════════════
+   🎊 KUTLAMA KONFETİ
+══════════════════════════════════════════ */
+@keyframes confettiFall {
+  to { top: 105vh; transform: rotate(720deg) translateX(50px); opacity: 0; }
 }
