@@ -481,7 +481,16 @@ class QuranPortal {
     _attachAudioControlEvents() {
         if (this.dom.playBtn) this.dom.playBtn.onclick = () => this.playAyah(this.state.currentSurahId, parseInt(this.dom.verseInp.value) || 1);
         if (this.dom.stopBtn) this.dom.stopBtn.onclick = () => this._stopSystemAudio();
-        if (this.dom.resumeBtn) this.dom.resumeBtn.onclick = () => this.state.audioPlayer.play();
+        if (this.dom.resumeBtn) this.dom.resumeBtn.onclick = () => {
+            // Eğer ses zaten yüklüyse ve duraklatılmışsa devam ettir
+            if (this.state.currentSurahId && !this.state.audioPlayer.paused) return;
+            if (this.state.currentSurahId && this.state.audioPlayer.src && this.state.audioPlayer.paused) {
+                this.state.audioPlayer.play();
+                return;
+            }
+            // Yoksa kayıtlı pozisyondan başlat
+            this._resumeReading();
+        };
         if (this.dom.mealBtn) this.dom.mealBtn.onclick = () => this._scrollToMeal();
         if (this.dom.hifzBtn) this.dom.hifzBtn.onclick = () => this._togglePanel('hifzPanel');
         if (this.dom.hifzStartBtn) this.dom.hifzStartBtn.onclick = () => this._startHifzMode();
@@ -3057,12 +3066,22 @@ class QuranPortal {
         document.getElementById('resumeBar')?.remove();
         const meta = this.state.surahMetadata.find(m=>m.id===pos.surahId);
         if (meta) {
-            this.dom.surahInp.value = meta.name;
-            await this._loadSurah(pos.surahId);
+            // Sure seçicisini güncelle
+            if (this.dom.surahInp) this.dom.surahInp.value = meta.name;
+            const sel = document.getElementById('surahSelect');
+            if (sel) sel.value = pos.surahId;
+            // Sureyi yükle
+            await this.loadSurah(pos.surahId);
+            // Kısa bekle: sure render edilsin, sonra o ayetten başlat
             setTimeout(() => {
-                const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
-                if (el) el.scrollIntoView({behavior:'smooth',block:'center'});
-            }, 800);
+                // O ayetten sesi başlat
+                this.playAyah(pos.surahId, pos.ayahId);
+                // Ayet ekranda görünsün
+                setTimeout(() => {
+                    const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
+                    if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
+                }, 400);
+            }, 600);
         }
     }
 
