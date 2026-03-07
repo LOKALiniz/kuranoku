@@ -6,6 +6,29 @@
   <meta name="google" content="notranslate">
   <title>Kur'an-ı Kerim Oku</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#d4af37" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then(reg => {
+          // Yeni SW varsa güncelle
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[SW] Güncelleme mevcut');
+                }
+              });
+            }
+          });
+        })
+        .catch(err => console.warn('[SW] Kayıt hatası:', err));
+    }
+  </script>
 </head>
 <body>
 
@@ -86,24 +109,7 @@
         </div>
       </div>
 
-      <!-- BUTON GRUBU -->
-      <div class="button-group">
-        <button id="playButton"><span class="btn-icon">🔊</span><span class="btn-label">Oynat</span></button>
-        <button id="resumeButton"><span class="btn-icon">▶️</span><span class="btn-label">Devam</span></button>
-        <button id="stopButton"><span class="btn-icon">⏹</span><span class="btn-label">Durdur</span></button>
-        <button id="showMealButton"><span class="btn-icon">📖</span><span class="btn-label">Meal</span></button>
-        <button id="hifzButton"><span class="btn-icon">🧠</span><span class="btn-label">Hafızlık</span></button>
-        <button id="statsButton"><span class="btn-icon">📊</span><span class="btn-label">İstatistik</span></button>
-        <button id="zikrButton"><span class="btn-icon">📿</span><span class="btn-label">Zikir</span></button>
-        <button id="gamesButton"><span class="btn-icon">🎮</span><span class="btn-label">Oyunlar</span></button>
-        <button id="prayerButton"><span class="btn-icon">🕌</span><span class="btn-label">Namaz Vakti</span></button>
-        <button id="duaButton"><span class="btn-icon">🤲</span><span class="btn-label">Dualar</span></button>
-        <button id="bookmarkButton"><span class="btn-icon">🔖</span><span class="btn-label">Yer İmi</span></button>
-        <button id="searchVerseButton"><span class="btn-icon">🔍</span><span class="btn-label">Ayet Ara</span></button>
-        <button id="badgeButton"><span class="btn-icon">🏅</span><span class="btn-label">Rozetler</span></button>
-        <button id="calendarButton"><span class="btn-icon">📅</span><span class="btn-label">Takvim</span></button>
-        <button id="shareButton"><span class="btn-icon">📤</span><span class="btn-label">Paylaş</span></button>
-      </div>
+      <!-- BUTON GRUBU — Floating Bubble olarak taşındı -->
 
       <!-- HAFIZLIK PANELİ -->
       <div id="hifzPanel" class="hifz-panel hidden">
@@ -520,6 +526,131 @@
 
   <!-- Kelime Tooltip -->
   <div id="wordTooltip" class="word-tooltip hidden"></div>
+
+  <!-- PWA INSTALL BUTTON -->
+  <button id="pwaInstallBtn" style="display:none;position:fixed;bottom:160px;right:24px;z-index:9990;background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;border:none;border-radius:20px;padding:8px 16px;font-size:0.75rem;font-family:sans-serif;font-weight:bold;cursor:pointer;box-shadow:0 4px 20px rgba(212,175,55,0.4);white-space:nowrap;">📲 Telefona Kur</button>
+
+  <!-- ═══════════════════════════════════════════
+       FLOATING BUBBLE MENÜ
+  ═══════════════════════════════════════════ -->
+  <!-- Karaoke Toggle -->
+  <button id="karaokeToggleBtn" onclick="App._toggleKaraoke()">🎤 Karaoke: Kapalı</button>
+
+  <div id="bubbleMenu" class="bubble-menu">
+    <button id="bubbleTrigger" class="bubble-trigger" title="Menü">
+      <span class="bubble-trigger-icon">☰</span>
+    </button>
+
+    <div id="bubbleGrid" class="bubble-grid hidden">
+      <div class="bubble-grid-inner">
+        <!-- Başlık + sayfa noktaları -->
+        <div class="bubble-page-nav">
+          <span class="bubble-grid-title">🕋 Özellikler</span>
+          <div class="bubble-dots">
+            <span class="bubble-dot active" data-page="1"></span>
+            <span class="bubble-dot" data-page="2"></span>
+            <span class="bubble-dot" data-page="3"></span>
+          </div>
+        </div>
+
+        <!-- Sayfa wrapper (kaydırmalı) -->
+        <div class="bubble-pages-wrapper" id="bubblePagesWrapper">
+          <div class="bubble-pages-track" id="bubblePagesTrack">
+
+          <!-- Sayfa 1: 9 buton -->
+          <div class="bubble-page" id="bubblePage1">
+            <button id="playButton"     class="bubble-btn"><span class="bubble-btn-icon">🔊</span><span class="bubble-btn-label">Oynat</span></button>
+            <button id="resumeButton"   class="bubble-btn"><span class="bubble-btn-icon">▶️</span><span class="bubble-btn-label">Devam</span></button>
+            <button id="stopButton"     class="bubble-btn"><span class="bubble-btn-icon">⏹</span><span class="bubble-btn-label">Durdur</span></button>
+            <button id="showMealButton" class="bubble-btn"><span class="bubble-btn-icon">📖</span><span class="bubble-btn-label">Meal</span></button>
+            <button id="hifzButton"     class="bubble-btn"><span class="bubble-btn-icon">🧠</span><span class="bubble-btn-label">Hafızlık</span></button>
+            <button id="statsButton"    class="bubble-btn"><span class="bubble-btn-icon">📊</span><span class="bubble-btn-label">İstatistik</span></button>
+            <button id="zikrButton"     class="bubble-btn"><span class="bubble-btn-icon">📿</span><span class="bubble-btn-label">Zikir</span></button>
+            <button id="gamesButton"    class="bubble-btn"><span class="bubble-btn-icon">🎮</span><span class="bubble-btn-label">Oyunlar</span></button>
+            <button id="karaokeMenuBtn" class="bubble-btn"><span class="bubble-btn-icon">🎤</span><span class="bubble-btn-label">Karaoke</span></button>
+          </div>
+
+          <!-- Sayfa 2: 9 buton -->
+          <div class="bubble-page" id="bubblePage2">
+            <button id="prayerButton"       class="bubble-btn"><span class="bubble-btn-icon">🕌</span><span class="bubble-btn-label">Namaz</span></button>
+            <button id="duaButton"          class="bubble-btn"><span class="bubble-btn-icon">🤲</span><span class="bubble-btn-label">Dualar</span></button>
+            <button id="bookmarkButton"     class="bubble-btn"><span class="bubble-btn-icon">🔖</span><span class="bubble-btn-label">Yer İmi</span></button>
+            <button id="searchVerseButton"  class="bubble-btn"><span class="bubble-btn-icon">🔍</span><span class="bubble-btn-label">Ayet Ara</span></button>
+            <button id="badgeButton"        class="bubble-btn"><span class="bubble-btn-icon">🏅</span><span class="bubble-btn-label">Rozetler</span></button>
+            <button id="calendarButton"     class="bubble-btn"><span class="bubble-btn-icon">📅</span><span class="bubble-btn-label">Takvim</span></button>
+            <button id="shareButton"        class="bubble-btn"><span class="bubble-btn-icon">📤</span><span class="bubble-btn-label">Paylaş</span></button>
+            <button id="bubbleAdminBtn"     class="bubble-btn"><span class="bubble-btn-icon">⚙️</span><span class="bubble-btn-label">Ayarlar</span></button>
+            <button id="bubbleThemeBtn"     class="bubble-btn"><span class="bubble-btn-icon">🌗</span><span class="bubble-btn-label">Tema</span></button>
+            <button id="bubbleProfileBtn"   class="bubble-btn"><span class="bubble-btn-icon">👤</span><span class="bubble-btn-label">Profil</span></button>
+          </div>
+
+          <!-- Sayfa 3: Yeni özellikler -->
+          <div class="bubble-page" id="bubblePage3">
+            <button id="tefsirButton"       class="bubble-btn"><span class="bubble-btn-icon">📜</span><span class="bubble-btn-label">Tefsir</span></button>
+            <button id="esmaButton"         class="bubble-btn"><span class="bubble-btn-icon">✨</span><span class="bubble-btn-label">Esmaül Hüsna</span></button>
+            <button id="leaderboardButton"  class="bubble-btn"><span class="bubble-btn-icon">🏆</span><span class="bubble-btn-label">Liderlik</span></button>
+            <button id="hatimButton"        class="bubble-btn"><span class="bubble-btn-icon">👥</span><span class="bubble-btn-label">Hatim Grubu</span></button>
+            <button id="notifButton"        class="bubble-btn"><span class="bubble-btn-icon">🔔</span><span class="bubble-btn-label">Bildirim</span></button>
+            <button id="offlineButton"      class="bubble-btn"><span class="bubble-btn-icon">🔇</span><span class="bubble-btn-label">Çevrimdışı</span></button>
+            <button id="bubbleTopBtn"       class="bubble-btn"><span class="bubble-btn-icon">⬆️</span><span class="bubble-btn-label">Başa Dön</span></button>
+            <button id="bubbleTheme2Btn"    class="bubble-btn"><span class="bubble-btn-icon">🌗</span><span class="bubble-btn-label">Tema</span></button>
+            <button id="bubbleReloadBtn"    class="bubble-btn"><span class="bubble-btn-icon">🔄</span><span class="bubble-btn-label">Yenile</span></button>
+          </div>
+
+        </div><!-- /bubble-pages-track -->
+        </div><!-- /bubble-pages-wrapper -->
+
+      </div><!-- /bubble-grid-inner -->
+    </div><!-- /bubbleGrid -->
+  </div><!-- /bubbleMenu -->
+
+  <!-- ═══════════════ TEFSİR PANELİ ═══════════════ -->
+  <div id="tefsirPanel" class="extra-panel hidden">
+    <div class="extra-panel-inner">
+      <div class="panel-title">📜 Tefsir <button class="panel-close" onclick="App._togglePanel('tefsirPanel')">✕</button></div>
+      <div id="tefsirContent" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ESMAÜL HÜSNA PANELİ ═══════════════ -->
+  <div id="esmaPanel" class="extra-panel hidden">
+    <div class="extra-panel-inner">
+      <div class="panel-title">✨ Esmaül Hüsna — Allah'ın 99 İsmi <button class="panel-close" onclick="App._togglePanel('esmaPanel')">✕</button></div>
+      <div id="esmaContent" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ LİDERLİK TABLOSU ═══════════════ -->
+  <div id="leaderboardPanel" class="extra-panel hidden">
+    <div class="extra-panel-inner">
+      <div class="panel-title">🏆 Liderlik Tablosu <button class="panel-close" onclick="App._togglePanel('leaderboardPanel')">✕</button></div>
+      <div id="leaderboardContent" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HATİM GRUBU ═══════════════ -->
+  <div id="hatimPanel" class="extra-panel hidden">
+    <div class="extra-panel-inner">
+      <div class="panel-title">👥 Hatim Grubu <button class="panel-close" onclick="App._togglePanel('hatimPanel')">✕</button></div>
+      <div id="hatimContent" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ BİLDİRİM PANELİ ═══════════════ -->
+  <div id="notifPanel" class="extra-panel hidden">
+    <div class="extra-panel-inner">
+      <div class="panel-title">🔔 Hatırlatıcı Bildirimi <button class="panel-close" onclick="App._togglePanel('notifPanel')">✕</button></div>
+      <div id="notifContent" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ÇEVRİMDIŞI MOD PANELİ ═══════════════ -->
+  <div id="offlinePanel" class="extra-panel hidden">
+    <div class="extra-panel-inner">
+      <div class="panel-title">🔇 Çevrimdışı Mod <button class="panel-close" onclick="App._togglePanel('offlinePanel')">✕</button></div>
+      <div id="offlineContent" style="padding:12px"></div>
+    </div>
+  </div>
 
   <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
