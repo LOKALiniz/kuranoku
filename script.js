@@ -481,16 +481,7 @@ class QuranPortal {
     _attachAudioControlEvents() {
         if (this.dom.playBtn) this.dom.playBtn.onclick = () => this.playAyah(this.state.currentSurahId, parseInt(this.dom.verseInp.value) || 1);
         if (this.dom.stopBtn) this.dom.stopBtn.onclick = () => this._stopSystemAudio();
-        if (this.dom.resumeBtn) this.dom.resumeBtn.onclick = () => {
-            // Eğer ses zaten yüklüyse ve duraklatılmışsa devam ettir
-            if (this.state.currentSurahId && !this.state.audioPlayer.paused) return;
-            if (this.state.currentSurahId && this.state.audioPlayer.src && this.state.audioPlayer.paused) {
-                this.state.audioPlayer.play();
-                return;
-            }
-            // Yoksa kayıtlı pozisyondan başlat
-            this._resumeReading();
-        };
+        if (this.dom.resumeBtn) this.dom.resumeBtn.onclick = () => this.state.audioPlayer.play();
         if (this.dom.mealBtn) this.dom.mealBtn.onclick = () => this._scrollToMeal();
         if (this.dom.hifzBtn) this.dom.hifzBtn.onclick = () => this._togglePanel('hifzPanel');
         if (this.dom.hifzStartBtn) this.dom.hifzStartBtn.onclick = () => this._startHifzMode();
@@ -2481,7 +2472,7 @@ class QuranPortal {
             if (isOpen && !menu.contains(e.target)) close();
         });
 
-        // ── BALONCUĞU SÜRÜKLE (menü pozisyonu) ──
+        // ── BALONÇUĞU SÜRÜKLE (menü pozisyonu) ──
         let dragStartX, dragStartY;
         const onDragStart = (e) => {
             if (!trigger.contains(e.target)) return;
@@ -2494,23 +2485,41 @@ class QuranPortal {
             menu.style.right = 'auto'; menu.style.top = 'auto';
             menu.style.left   = menuOrigLeft   + 'px';
             menu.style.bottom = menuOrigBottom + 'px';
-            close();
-            e.preventDefault();
+            // preventDefault YOK — Android'de click'i öldürürdü
         };
         const onDragMove = (e) => {
             if (dragStartX === undefined) return;
             const t = e.touches ? e.touches[0] : e;
             const dx = t.clientX - dragStartX, dy = t.clientY - dragStartY;
-            if (Math.abs(dx) > 6 || Math.abs(dy) > 6) menuDragging = true;
+            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) menuDragging = true;
             if (!menuDragging) return;
             menu.style.left   = Math.max(0, Math.min(window.innerWidth  - 64, menuOrigLeft   + dx)) + 'px';
             menu.style.bottom = Math.max(0, Math.min(window.innerHeight - 64, menuOrigBottom - dy)) + 'px';
             e.preventDefault();
         };
-        const onDragEnd = () => { dragStartX = dragStartY = undefined; };
+        const onDragEnd = (e) => {
+            // Sürükleme olmadıysa touchend'de ac/kapat (Android'de click gecikebilir)
+            if (!menuDragging && dragStartX !== undefined) {
+                const tgt = e && e.changedTouches ? document.elementFromPoint(
+                    e.changedTouches[0].clientX, e.changedTouches[0].clientY
+                ) : (e && e.target);
+                if (tgt && trigger.contains(tgt)) {
+                    const now = Date.now();
+                    if (now - lastClickTime < 380) {
+                        close(); lastClickTime = 0;
+                        this.playAyah(this.state.currentSurahId, 1);
+                        this._showToast('▶️ Sure baştan oynatılıyor…', '#38bdf8');
+                    } else {
+                        lastClickTime = now;
+                        isOpen ? close() : open();
+                    }
+                }
+            }
+            dragStartX = dragStartY = undefined;
+        };
 
-        trigger.addEventListener('mousedown',  onDragStart, { passive: false });
-        trigger.addEventListener('touchstart', onDragStart, { passive: false });
+        trigger.addEventListener('mousedown',  onDragStart, { passive: true });
+        trigger.addEventListener('touchstart', onDragStart, { passive: true });
         document.addEventListener('mousemove', onDragMove,  { passive: false });
         document.addEventListener('touchmove', onDragMove,  { passive: false });
         document.addEventListener('mouseup',   onDragEnd);
@@ -3066,22 +3075,12 @@ class QuranPortal {
         document.getElementById('resumeBar')?.remove();
         const meta = this.state.surahMetadata.find(m=>m.id===pos.surahId);
         if (meta) {
-            // Sure seçicisini güncelle
-            if (this.dom.surahInp) this.dom.surahInp.value = meta.name;
-            const sel = document.getElementById('surahSelect');
-            if (sel) sel.value = pos.surahId;
-            // Sureyi yükle
-            await this.loadSurah(pos.surahId);
-            // Kısa bekle: sure render edilsin, sonra o ayetten başlat
+            this.dom.surahInp.value = meta.name;
+            await this._loadSurah(pos.surahId);
             setTimeout(() => {
-                // O ayetten sesi başlat
-                this.playAyah(pos.surahId, pos.ayahId);
-                // Ayet ekranda görünsün
-                setTimeout(() => {
-                    const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
-                    if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
-                }, 400);
-            }, 600);
+                const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
+                if (el) el.scrollIntoView({behavior:'smooth',block:'center'});
+            }, 800);
         }
     }
 
