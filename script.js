@@ -1952,7 +1952,7 @@ class QuranPortal {
         const duas = [
             { cat: 'Sabah', arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ', tr: 'Sabahladık, mülk de Allah\'a sabahladı.', kaynak: 'Müslim' },
             { cat: 'Akşam', arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ', tr: 'Akşamladık, mülk de Allah\'a akşamladı.', kaynak: 'Müslim' },
-            { cat: 'Yemek', arabic: 'بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ', tr: 'Allah\'ın adıyla ve Allah\'ın bereketi ile.', kaynak: 'Ebu Davud' },
+            { cat: 'Yemek', arabic: 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\nاَلْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِينَ\nاَللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا وَقِنَا عَذَابَ النَّارِ', tr: 'Rahman ve Rahim olan Allah\'ın adıyla. Bizi yediren, içiren ve Müslüman kılan Allah\'a hamdolsun. Allah\'ım, bize verdiğin rızıkta bereket ver ve bizi cehennem azabından koru.', kaynak: 'Ebu Davud / Tirmizi' },
             { cat: 'Uyku', arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', tr: 'Allah\'ım, senin adınla ölür ve dirilirm.', kaynak: 'Buhari' },
             { cat: 'Yolculuk', arabic: 'سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا', tr: 'Bunu bize boyun eğdireni tesbih ederiz.', kaynak: 'Tirmizi' },
             { cat: 'Şifa', arabic: 'أَذْهِبِ الْبَأْسَ رَبَّ النَّاسِ', tr: 'Ey insanların Rabbi, sıkıntıyı gider.', kaynak: 'Buhari' },
@@ -3042,12 +3042,9 @@ class QuranPortal {
             {ar:"الرَّشِيدُ",tr:"Er-Reşid",mean:"Doğru yola ileten"},
             {ar:"الصَّبُورُ",tr:"Es-Sabur",mean:"Çok sabırlı olan"}
         ];
-        const panel = document.getElementById('esmaPanel');
-        if (!panel) return;
         const content = document.getElementById('esmaContent');
-        if (!content || content.dataset.loaded) return;
-        content.dataset.loaded = '1';
-        let current = 0;
+        if (!content) return;
+
         const cards = esma.map((e,i) => `
             <div class="esma-card" onclick="this.classList.toggle('esma-flipped')" title="Tıkla - anlam göster">
                 <div class="esma-front">
@@ -3059,19 +3056,81 @@ class QuranPortal {
                     <div class="esma-meaning">${e.mean}</div>
                 </div>
             </div>`).join('');
+
+        const loadEsmaLeaderboard = async () => {
+            const lbDiv = document.getElementById('esmaLbContent');
+            if (!lbDiv) return;
+            lbDiv.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px;font-family:sans-serif">⏳ Yükleniyor...</div>';
+            try {
+                if (!window.FirebaseAuth) throw new Error('Firebase yok');
+                const { db, collection, getDocs, query, orderBy, limit } = window.FirebaseAuth;
+                const q = query(collection(db, 'esmaStats'), orderBy('esmaCount', 'desc'), limit(20));
+                const snap = await getDocs(q);
+                const medals = ['🥇','🥈','🥉'];
+                let rank = 1, rows = '';
+                snap.forEach(d => {
+                    const data = d.data();
+                    const name = data.displayName || data.email?.split('@')[0] || 'Anonim';
+                    const medal = medals[rank-1] || `${rank}.`;
+                    const pct = Math.round(((data.esmaCount||0)/99)*100);
+                    rows += `<div style="display:flex;align-items:center;gap:10px;background:${rank<=3?'rgba(212,175,55,0.08)':'#1e293b'};border:1px solid ${rank<=3?'#d4af3744':'#334155'};border-radius:10px;padding:10px 14px;margin-bottom:6px;font-family:sans-serif">
+                        <span style="font-size:1.2rem;min-width:28px">${medal}</span>
+                        <span style="color:#e2e8f0;flex:1;font-size:0.88rem;font-weight:${rank<=3?'bold':'normal'}">${name}</span>
+                        <div style="text-align:right">
+                            <div style="color:#d4af37;font-weight:bold;font-size:0.9rem">${data.esmaCount||0}/99</div>
+                            <div style="background:#0f172a;border-radius:4px;height:4px;width:60px;overflow:hidden;margin-top:3px">
+                                <div style="background:#d4af37;height:100%;width:${pct}%"></div>
+                            </div>
+                        </div>
+                    </div>`;
+                    rank++;
+                });
+                lbDiv.innerHTML = rows || '<div style="color:#64748b;text-align:center;padding:20px;font-family:sans-serif">Henüz kayıt yok.</div>';
+            } catch(e) {
+                lbDiv.innerHTML = '<div style="color:#f87171;font-family:sans-serif;font-size:0.85rem;padding:10px;text-align:center">Liderlik tablosu yüklenemedi.</div>';
+            }
+        };
+
         content.innerHTML = `
-            <div style="font-family:sans-serif;color:#94a3b8;font-size:0.75rem;text-align:center;margin-bottom:12px;direction:ltr">
-                Tıklayarak anlamını gör • 99 isim
+            <div style="font-family:sans-serif;direction:ltr;margin-bottom:12px">
+                <div style="display:flex;gap:6px;margin-bottom:12px">
+                    <button id="esmaTabCards" style="flex:1;background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;border:none;border-radius:20px;padding:7px 0;font-size:0.82rem;font-weight:bold;cursor:pointer">✨ 99 İsim</button>
+                    <button id="esmaTabLb" style="flex:1;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:20px;padding:7px 0;font-size:0.82rem;font-weight:bold;cursor:pointer">🏆 Liderlik</button>
+                </div>
             </div>
-            <div class="esma-grid">${cards}</div>`;
+            <div id="esmaCardsSection">
+                <div style="font-family:sans-serif;color:#94a3b8;font-size:0.75rem;text-align:center;margin-bottom:12px">
+                    Tıklayarak anlamını gör • 99 isim
+                </div>
+                <div class="esma-grid">${cards}</div>
+            </div>
+            <div id="esmaLbSection" style="display:none">
+                <div id="esmaLbContent"><div style="color:#94a3b8;text-align:center;padding:20px;font-family:sans-serif">🏆 Liderlik tablosunu görmek için tıkla</div></div>
+            </div>`;
+
+        document.getElementById('esmaTabCards').onclick = () => {
+            document.getElementById('esmaCardsSection').style.display = 'block';
+            document.getElementById('esmaLbSection').style.display = 'none';
+            document.getElementById('esmaTabCards').style.background = 'linear-gradient(135deg,#d4af37,#f59e0b)';
+            document.getElementById('esmaTabCards').style.color = '#000';
+            document.getElementById('esmaTabLb').style.background = '#1e293b';
+            document.getElementById('esmaTabLb').style.color = '#94a3b8';
+        };
+        document.getElementById('esmaTabLb').onclick = () => {
+            document.getElementById('esmaCardsSection').style.display = 'none';
+            document.getElementById('esmaLbSection').style.display = 'block';
+            document.getElementById('esmaTabLb').style.background = 'linear-gradient(135deg,#d4af37,#f59e0b)';
+            document.getElementById('esmaTabLb').style.color = '#000';
+            document.getElementById('esmaTabCards').style.background = '#1e293b';
+            document.getElementById('esmaTabCards').style.color = '#94a3b8';
+            loadEsmaLeaderboard();
+        };
     }
 
     // ============================================================
     // 🏆 LİDERLİK TABLOSU
     // ============================================================
     async _initLeaderboard() {
-        const panel = document.getElementById('leaderboardPanel');
-        if (!panel) return;
         const content = document.getElementById('leaderboardContent');
         if (!content) return;
         content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
@@ -3108,22 +3167,20 @@ class QuranPortal {
     // 👥 HATİM GRUBU
     // ============================================================
     async _initHatimGroup() {
-        const panel = document.getElementById('hatimPanel');
-        if (!panel) return;
         const content = document.getElementById('hatimContent');
         if (!content) return;
         if (!window.FirebaseAuth || !this.state.currentUser) {
-            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:10px">Hatim grubu için giriş yapmanız gerekiyor.</div>';
+            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:14px;text-align:center">👤 Hatim grubu için giriş yapmanız gerekiyor.</div>';
             return;
         }
-        const { db, collection, getDocs, doc, setDoc, getDoc, query } = window.FirebaseAuth;
-        // Mevcut hatim gruplarını çek
+        const { db, collection, getDocs } = window.FirebaseAuth;
         content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
         try {
             const snap = await getDocs(collection(db, 'hatimGroups'));
+            const myUid = this.state.currentUser.uid;
             let html = `<div style="font-family:sans-serif;direction:ltr">
                 <div style="display:flex;gap:8px;margin-bottom:14px">
-                    <input id="hatimGroupName" placeholder="Grup adı..." style="flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:0.85rem"/>
+                    <input id="hatimGroupName" placeholder="Yeni grup adı..." style="flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:0.85rem"/>
                     <button onclick="App._createHatimGroup()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:0.85rem;font-weight:bold">+ Oluştur</button>
                 </div>
                 <div id="hatimGroupList">`;
@@ -3132,20 +3189,34 @@ class QuranPortal {
             } else {
                 snap.forEach(d => {
                     const g = d.data();
+                    const members = g.members || [];
+                    const assignments = g.assignments || {};
                     const prog = Math.round(((g.completedJuz||0)/30)*100);
+                    const totalAssigned = Object.values(assignments).filter(v=>v).length;
+                    const freeJuz = 30 - totalAssigned;
+                    const isMember = members.includes(myUid);
+                    const myJuzEntry = Object.entries(assignments).find(([juz, uid]) => uid === myUid);
+                    const myJuzNum = myJuzEntry ? myJuzEntry[0] : null;
+
                     html += `
-                        <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #334155">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span style="color:#e2e8f0;font-weight:bold">${g.name||'Grup'}</span>
-                                <span style="color:#94a3b8;font-size:0.78rem">${(g.members||[]).length} üye</span>
+                        <div style="background:#1e293b;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid #334155">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                                <span style="color:#e2e8f0;font-weight:bold;font-size:0.95rem">📖 ${g.name||'Grup'}</span>
+                                <span style="color:#94a3b8;font-size:0.78rem">${members.length} üye • ${freeJuz} cüz müsait</span>
                             </div>
-                            <div style="margin:8px 0">
+                            <div style="margin-bottom:10px">
                                 <div style="background:#0f172a;border-radius:4px;height:8px;overflow:hidden">
-                                    <div style="background:#d4af37;height:100%;width:${prog}%;transition:width 0.5s"></div>
+                                    <div style="background:linear-gradient(90deg,#d4af37,#f59e0b);height:100%;width:${prog}%;transition:width 0.5s"></div>
                                 </div>
-                                <div style="color:#94a3b8;font-size:0.72rem;margin-top:3px">${g.completedJuz||0}/30 Cüz tamamlandı (%${prog})</div>
+                                <div style="color:#94a3b8;font-size:0.72rem;margin-top:3px">${g.completedJuz||0}/30 Cüz tamamlandı — %${prog}</div>
                             </div>
-                            <button onclick="App._joinHatimGroup('${d.id}')" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.78rem">Katıl</button>
+                            ${myJuzNum ? `<div style="background:rgba(212,175,55,0.1);border:1px solid #d4af3766;border-radius:8px;padding:6px 10px;margin-bottom:8px;color:#d4af37;font-size:0.82rem;font-weight:bold">📌 Senin cüzün: ${myJuzNum}. Cüz</div>` : ''}
+                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                ${!isMember ? `<button onclick="App._joinHatimGroup('${d.id}')" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem">➕ Katıl</button>` : ''}
+                                ${isMember && !myJuzNum ? `<button onclick="App._showJuzPicker('${d.id}')" style="background:#d4af37;color:#000;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem;font-weight:bold">📋 Cüz Al</button>` : ''}
+                                ${myJuzNum ? `<button onclick="App._markJuzComplete('${d.id}','${myJuzNum}')" style="background:#059669;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem">✅ Tamamladım</button>` : ''}
+                                <button onclick="App._showHatimMembers('${d.id}')" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem">👥 Üyeler</button>
+                            </div>
                         </div>`;
                 });
             }
@@ -3156,6 +3227,130 @@ class QuranPortal {
         }
     }
 
+    async _showJuzPicker(groupId) {
+        if (!window.FirebaseAuth) return;
+        const { db, doc, getDoc } = window.FirebaseAuth;
+        const snap = await getDoc(doc(db, 'hatimGroups', groupId));
+        if (!snap.exists()) return;
+        const assignments = snap.data().assignments || {};
+        const myUid = this.state.currentUser.uid;
+
+        document.getElementById('juzPickerModal')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'juzPickerModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
+        const juzRows = Array.from({length:30},(_,i)=>i+1).map(n => {
+            const takenBy = assignments[n];
+            const isMe = takenBy === myUid;
+            const isTaken = takenBy && !isMe;
+            const bg = isMe ? '#1a3a2a' : isTaken ? '#3a1a1a' : '#0f2233';
+            const color = isMe ? '#6ee7b7' : isTaken ? '#fca5a566' : '#e2e8f0';
+            const border = isMe ? '#6ee7b7' : isTaken ? '#7f1d1d' : '#334155';
+            const label = isMe ? '(Sen)' : isTaken ? '🔒' : '✓';
+            const labelColor = isMe ? '#6ee7b7' : isTaken ? '#7f1d1d' : '#22c55e';
+            return `<button ${isTaken?'disabled':''} onclick="App._assignJuzToMe('${groupId}',${n})"
+                style="background:${bg};color:${color};border:1px solid ${border};border-radius:8px;padding:8px 4px;font-size:0.8rem;font-weight:bold;cursor:${isTaken?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;gap:2px">
+                <span>${n}</span>
+                <span style="font-size:0.6rem;color:${labelColor}">${label}</span>
+            </button>`;
+        }).join('');
+
+        modal.innerHTML = `
+            <div style="background:#0d1b2e;border:1px solid rgba(56,189,248,0.3);border-radius:16px;padding:20px;max-width:360px;width:100%;font-family:sans-serif;max-height:85vh;overflow-y:auto">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <span style="color:#d4af37;font-weight:bold;font-size:1rem">📋 Cüz Seç</span>
+                    <button onclick="document.getElementById('juzPickerModal').remove()" style="background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.82rem">✕</button>
+                </div>
+                <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:12px">🟢 Müsait &nbsp; 🔒 Dolu &nbsp; ✓ Senin</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">${juzRows}</div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.onclick = (e) => { if(e.target===modal) modal.remove(); };
+    }
+
+    async _assignJuzToMe(groupId, juzNum) {
+        if (!window.FirebaseAuth) return;
+        const { db, doc, updateDoc, arrayUnion } = window.FirebaseAuth;
+        try {
+            await updateDoc(doc(db, 'hatimGroups', groupId), {
+                [`assignments.${juzNum}`]: this.state.currentUser.uid,
+                members: arrayUnion(this.state.currentUser.uid)
+            });
+            document.getElementById('juzPickerModal')?.remove();
+            this._showToast(`✅ ${juzNum}. Cüz sana atandı!`, '#6ee7b7');
+            this._initHatimGroup();
+        } catch(e) {
+            this._showToast('❌ Cüz atanamadı.', '#f87171');
+        }
+    }
+
+    async _markJuzComplete(groupId, juzNum) {
+        if (!window.FirebaseAuth) return;
+        const { db, doc, updateDoc, increment } = window.FirebaseAuth;
+        try {
+            await updateDoc(doc(db, 'hatimGroups', groupId), {
+                [`assignments.${juzNum}`]: null,
+                completedJuz: increment(1)
+            });
+            this._showToast(`🎉 ${juzNum}. Cüz tamamlandı! Hayırlı olsun!`, '#d4af37');
+            this._initHatimGroup();
+        } catch(e) {
+            this._showToast('❌ Güncelleme başarısız.', '#f87171');
+        }
+    }
+
+    async _showHatimMembers(groupId) {
+        if (!window.FirebaseAuth) return;
+        const { db, doc, getDoc } = window.FirebaseAuth;
+        const snap = await getDoc(doc(db, 'hatimGroups', groupId));
+        if (!snap.exists()) return;
+        const g = snap.data();
+        const members = g.members || [];
+        const assignments = g.assignments || {};
+        const myUid = this.state.currentUser.uid;
+
+        const memberJuzMap = {};
+        for (const [juz, uid] of Object.entries(assignments)) {
+            if (!uid) continue;
+            if (!memberJuzMap[uid]) memberJuzMap[uid] = [];
+            memberJuzMap[uid].push(Number(juz));
+        }
+
+        document.getElementById('hatimMembersModal')?.remove();
+        let memberRows = `<div style="color:#64748b;font-size:0.78rem;margin-bottom:10px;font-family:sans-serif">${members.length} üye • toplam ${Object.values(assignments).filter(v=>v).length} cüz atandı</div>`;
+        for (const uid of members) {
+            let name = uid.slice(0,8) + '...';
+            try {
+                const uSnap = await getDoc(doc(db, 'users', uid));
+                if (uSnap.exists()) { const ud = uSnap.data(); name = ud.displayName || ud.email?.split('@')[0] || name; }
+            } catch(e) {}
+            const juzList = (memberJuzMap[uid] || []).sort((a,b)=>a-b);
+            const isMe = uid === myUid;
+            memberRows += `
+                <div style="display:flex;align-items:center;gap:10px;background:${isMe?'rgba(212,175,55,0.08)':'#1e293b'};border:1px solid ${isMe?'#d4af3766':'#334155'};border-radius:10px;padding:10px 12px;margin-bottom:6px;font-family:sans-serif">
+                    <span style="font-size:1.1rem">👤</span>
+                    <div style="flex:1">
+                        <div style="color:${isMe?'#d4af37':'#e2e8f0'};font-size:0.88rem;font-weight:${isMe?'bold':'normal'}">${name}${isMe?' (Sen)':''}</div>
+                        <div style="color:#64748b;font-size:0.75rem;margin-top:2px">${juzList.length>0?`📖 Cüz: ${juzList.join(', ')}` : '⏳ Cüz atanmadı'}</div>
+                    </div>
+                </div>`;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'hatimMembersModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
+        modal.innerHTML = `
+            <div style="background:#0d1b2e;border:1px solid rgba(56,189,248,0.3);border-radius:16px;padding:20px;max-width:380px;width:100%;font-family:sans-serif;max-height:85vh;overflow-y:auto">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <span style="color:#38bdf8;font-weight:bold;font-size:1rem">👥 ${g.name||'Grup'} — Üyeler</span>
+                    <button onclick="document.getElementById('hatimMembersModal').remove()" style="background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.82rem">✕</button>
+                </div>
+                ${memberRows}
+            </div>`;
+        document.body.appendChild(modal);
+        modal.onclick = (e) => { if(e.target===modal) modal.remove(); };
+    }
+
     async _createHatimGroup() {
         const name = document.getElementById('hatimGroupName')?.value?.trim();
         if (!name) return;
@@ -3163,7 +3358,7 @@ class QuranPortal {
         const { db, collection, addDoc } = window.FirebaseAuth;
         await addDoc(collection(db, 'hatimGroups'), {
             name, members: [this.state.currentUser.uid],
-            completedJuz: 0, createdAt: Date.now(),
+            completedJuz: 0, assignments: {}, createdAt: Date.now(),
             createdBy: this.state.currentUser.uid
         });
         this._showToast('✅ Hatim grubu oluşturuldu!', '#6ee7b7');
@@ -3177,14 +3372,13 @@ class QuranPortal {
             members: arrayUnion(this.state.currentUser.uid)
         });
         this._showToast('✅ Gruba katıldınız!', '#6ee7b7');
+        this._initHatimGroup();
     }
 
     // ============================================================
     // 🔔 HATIRLATICI BİLDİRİMİ
     // ============================================================
     async _initNotifications() {
-        const panel = document.getElementById('notifPanel');
-        if (!panel) return;
         const content = document.getElementById('notifContent');
         if (!content) return;
         const saved = JSON.parse(localStorage.getItem('qp_notif') || '{"enabled":false,"time":"07:00","msg":"Günlük Kuran okuma zamani! 📖"}');
