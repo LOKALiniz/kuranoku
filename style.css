@@ -1512,7 +1512,7 @@ body.light .ayah-end {
   align-items: flex-end;
   gap: 10px;
   user-select: none;
-  touch-action: none;
+  touch-action: manipulation;
 }
 
 /* Ana tetikleyici top */
@@ -1542,10 +1542,11 @@ body.light .ayah-end {
 
 /* Açılan grid kutusu */
 .bubble-grid {
-  position: absolute;
-  bottom: 70px;
-  right: 0;
+  position: fixed;
+  bottom: 100px;
+  right: 16px;
   transform-origin: bottom right;
+  z-index: 9991;
   /* Ekrandan taşmasın */
   max-width: calc(100vw - 32px);
 }
