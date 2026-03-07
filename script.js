@@ -481,7 +481,13 @@ class QuranPortal {
     _attachAudioControlEvents() {
         if (this.dom.playBtn) this.dom.playBtn.onclick = () => this.playAyah(this.state.currentSurahId, parseInt(this.dom.verseInp.value) || 1);
         if (this.dom.stopBtn) this.dom.stopBtn.onclick = () => this._stopSystemAudio();
-        if (this.dom.resumeBtn) this.dom.resumeBtn.onclick = () => this.state.audioPlayer.play();
+        if (this.dom.resumeBtn) this.dom.resumeBtn.onclick = () => {
+            if (this.state.currentSurahId && this.state.audioPlayer.src && this.state.audioPlayer.paused) {
+                this.state.audioPlayer.play();
+            } else {
+                this._resumeReading();
+            }
+        };
         if (this.dom.mealBtn) this.dom.mealBtn.onclick = () => this._scrollToMeal();
         if (this.dom.hifzBtn) this.dom.hifzBtn.onclick = () => this._togglePanel('hifzPanel');
         if (this.dom.hifzStartBtn) this.dom.hifzStartBtn.onclick = () => this._startHifzMode();
@@ -2452,19 +2458,10 @@ class QuranPortal {
             trigger.querySelector('.bubble-trigger-icon').textContent = '☰';
         };
 
-        // ── TEK / ÇİFT TIKLAMA ──
-        let lastClickTime = 0;
+        // ── AÇ / KAPAT ──
         trigger.addEventListener('click', (e) => {
             if (menuDragging) return;
             e.stopPropagation();
-            const now = Date.now();
-            if (now - lastClickTime < 380) {
-                close(); lastClickTime = 0;
-                this.playAyah(this.state.currentSurahId, 1);
-                this._showToast('▶️ Sure baştan oynatılıyor…', '#38bdf8');
-                return;
-            }
-            lastClickTime = now;
             isOpen ? close() : open();
         });
 
@@ -2472,7 +2469,7 @@ class QuranPortal {
             if (isOpen && !menu.contains(e.target)) close();
         });
 
-        // ── BALONÇUĞU SÜRÜKLE (menü pozisyonu) ──
+        // ── BALONCUĞU SÜRÜKLE (menü pozisyonu) ──
         let dragStartX, dragStartY;
         const onDragStart = (e) => {
             if (!trigger.contains(e.target)) return;
@@ -2485,38 +2482,18 @@ class QuranPortal {
             menu.style.right = 'auto'; menu.style.top = 'auto';
             menu.style.left   = menuOrigLeft   + 'px';
             menu.style.bottom = menuOrigBottom + 'px';
-            // preventDefault YOK — Android'de click'i öldürürdü
         };
         const onDragMove = (e) => {
             if (dragStartX === undefined) return;
             const t = e.touches ? e.touches[0] : e;
             const dx = t.clientX - dragStartX, dy = t.clientY - dragStartY;
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) menuDragging = true;
+            if (Math.abs(dx) > 6 || Math.abs(dy) > 6) menuDragging = true;
             if (!menuDragging) return;
             menu.style.left   = Math.max(0, Math.min(window.innerWidth  - 64, menuOrigLeft   + dx)) + 'px';
             menu.style.bottom = Math.max(0, Math.min(window.innerHeight - 64, menuOrigBottom - dy)) + 'px';
             e.preventDefault();
         };
-        const onDragEnd = (e) => {
-            // Sürükleme olmadıysa touchend'de ac/kapat (Android'de click gecikebilir)
-            if (!menuDragging && dragStartX !== undefined) {
-                const tgt = e && e.changedTouches ? document.elementFromPoint(
-                    e.changedTouches[0].clientX, e.changedTouches[0].clientY
-                ) : (e && e.target);
-                if (tgt && trigger.contains(tgt)) {
-                    const now = Date.now();
-                    if (now - lastClickTime < 380) {
-                        close(); lastClickTime = 0;
-                        this.playAyah(this.state.currentSurahId, 1);
-                        this._showToast('▶️ Sure baştan oynatılıyor…', '#38bdf8');
-                    } else {
-                        lastClickTime = now;
-                        isOpen ? close() : open();
-                    }
-                }
-            }
-            dragStartX = dragStartY = undefined;
-        };
+        const onDragEnd = () => { dragStartX = dragStartY = undefined; };
 
         trigger.addEventListener('mousedown',  onDragStart, { passive: true });
         trigger.addEventListener('touchstart', onDragStart, { passive: true });
@@ -3075,12 +3052,17 @@ class QuranPortal {
         document.getElementById('resumeBar')?.remove();
         const meta = this.state.surahMetadata.find(m=>m.id===pos.surahId);
         if (meta) {
-            this.dom.surahInp.value = meta.name;
-            await this._loadSurah(pos.surahId);
+            if (this.dom.surahInp) this.dom.surahInp.value = meta.name;
+            const sel = document.getElementById('surahSelect');
+            if (sel) sel.value = pos.surahId;
+            await this.loadSurah(pos.surahId);
             setTimeout(() => {
-                const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
-                if (el) el.scrollIntoView({behavior:'smooth',block:'center'});
-            }, 800);
+                this.playAyah(pos.surahId, pos.ayahId);
+                setTimeout(() => {
+                    const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
+                    if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
+                }, 400);
+            }, 700);
         }
     }
 
@@ -3144,11 +3126,55 @@ class QuranPortal {
     _createBismillahModule(surahId) {
         const div = this._createElement('div', 'bismillah-v15', 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ');
         const isDark = !document.body.classList.contains('light');
-        const baseColor = isDark ? '#2c1500' : '#2c1500';
+        const baseColor = isDark ? '#d4af37' : '#92400e';
         div.style.cssText = `color:${baseColor};opacity:1;font-size:3.2rem;text-align:center;margin:30px 0 50px 0;font-family:"Amiri Quran",serif;cursor:pointer;transition:color 0.3s ease;direction:rtl;display:block;width:100%;`;
-        div.onclick = () => this.playAyah(surahId, 0);
-        div.onmouseenter = () => { div.style.color = '#d4af37'; };
-        div.onmouseleave = () => { div.style.color = baseColor; };
+        div.onclick = () => this.playAyah(surahId, 1);
+        div.onmouseenter = (e) => {
+            div.style.color = '#f59e0b';
+            // Tooltip göster
+            const tooltip = this.dom.tooltip;
+            if (tooltip) {
+                tooltip.innerHTML = '';
+                const arabicEl = document.createElement('div');
+                arabicEl.style.cssText = 'font-size:1rem;color:#fcd34d;font-family:serif;margin-bottom:4px;text-align:center;direction:rtl';
+                arabicEl.textContent = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+                const meaningEl = document.createElement('div');
+                meaningEl.style.cssText = 'font-size:0.85rem;color:#e2e8f0;text-align:center;direction:ltr';
+                meaningEl.textContent = 'Rahman ve Rahim olan Allah\'ın adıyla';
+                tooltip.appendChild(arabicEl);
+                tooltip.appendChild(meaningEl);
+                tooltip.classList.remove('hidden');
+                const cx = e.clientX, cy = e.clientY;
+                const tipW = 240;
+                let left = cx - tipW / 2;
+                if (left < 8) left = 8;
+                if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = (cy - 70) + 'px';
+            }
+        };
+        div.onmouseleave = () => {
+            div.style.color = baseColor;
+            if (this.dom.tooltip) this.dom.tooltip.classList.add('hidden');
+        };
+        // Mobil dokunuş
+        div.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            const tooltip = this.dom.tooltip;
+            if (tooltip) {
+                tooltip.innerHTML = '<div style="font-size:1rem;color:#fcd34d;text-align:center;direction:rtl;margin-bottom:4px">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div><div style="font-size:0.85rem;color:#e2e8f0;text-align:center">Rahman ve Rahim olan Allah\'ın adıyla</div>';
+                tooltip.classList.remove('hidden');
+                const tipW = 240;
+                let left = touch.clientX - tipW / 2;
+                if (left < 8) left = 8;
+                if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = (touch.clientY - 70) + 'px';
+            }
+        }, { passive: true });
+        div.addEventListener('touchend', () => {
+            setTimeout(() => { if (this.dom.tooltip) this.dom.tooltip.classList.add('hidden'); }, 2000);
+        });
         return div;
     }
 
