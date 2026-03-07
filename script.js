@@ -40,6 +40,11 @@ class QuranPortal {
             theme: localStorage.getItem('portal_theme') || 'dark',
             currentUser: null,
             authMode: 'login', // 'login' | 'register'
+            // 🎤 KARAOKE
+            karaokeActive: false,
+            karaokeTimings: null,   // { "1:1": [[wordIdx, startMs, endMs], ...], ... }
+            karaokeRAF: null,       // requestAnimationFrame handle
+            karaokeCurrentKey: null,
             semantics: {
                 "inek": 2, "bakara": 2, "ari": 16, "nahl": 16, "magara": 18, "kehf": 18,
                 "gece": 17, "isra": 17, "sofra": 5, "maide": 5, "karinca": 27, "neml": 27,
@@ -307,6 +312,7 @@ class QuranPortal {
             this._injectSupremeStyles();
             this._forceInjectNeuralOverlay();
             this._bindGlobalEvents();
+            this._initBubbleMenu();
 
             await this._coreTaskRunner();
 
@@ -323,10 +329,15 @@ class QuranPortal {
 
             const lastViewed = localStorage.getItem('qp_last_viewed') || 1;
             await this.loadSurah(parseInt(lastViewed));
-            this._renderDailyVerse();
+            await this._renderDailyVerse();
             this._loadSiteBanner();
             this._loadPinnedMessageFromFirebase();
             this._initVerseSearch();
+            this._initAutoTheme();
+            setTimeout(() => this._loadLastPosition(), 2000);
+            this._scheduleNotification(JSON.parse(localStorage.getItem('qp_notif')||'{"enabled":false}'));
+            this._initPWAInstall();
+            this._initOfflineDetection();
 
             this.log(`Boot tamamlandı: ${(performance.now() - this.state.bootTime).toFixed(2)}ms`, "success");
         } catch (error) {
@@ -383,6 +394,18 @@ class QuranPortal {
             calendarPanel: document.getElementById('calendarPanel'),
             shareBtn: document.getElementById('shareButton'),
             sharePanel: document.getElementById('sharePanel'),
+            // Yeni butonlar
+            tefsirBtn: document.getElementById('tefsirButton'),
+            tefsirPanel: document.getElementById('tefsirPanel'),
+            esmaBtn: document.getElementById('esmaButton'),
+            esmaPanel: document.getElementById('esmaPanel'),
+            leaderboardBtn: document.getElementById('leaderboardButton'),
+            leaderboardPanel: document.getElementById('leaderboardPanel'),
+            hatimBtn: document.getElementById('hatimButton'),
+            hatimPanel: document.getElementById('hatimPanel'),
+            notifBtn: document.getElementById('notifButton'),
+            offlineBtn: document.getElementById('offlineButton'),
+            notifPanel: document.getElementById('notifPanel'),
             fontSlider: document.getElementById('fontSizeSlider'),
             fontVal: document.getElementById('fontSizeVal'),
             speedSlider: document.getElementById('speedSlider'),
@@ -398,9 +421,11 @@ class QuranPortal {
         styleSheet.innerHTML = `
             .mushaf-card-v15 { background-color: ${this.config.mushafBgColor}; border-radius: 20px; padding: 50px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); margin: 30px auto; max-width: 1100px; direction: rtl; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(212, 175, 55, 0.1); }
             .mushaf-title-v15 { text-align: center; color: ${this.config.systemAccentColor}; font-family: serif; margin-bottom: 25px; direction: ltr; font-size: 2.8rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-            .bismillah-v15 { text-align: center; font-size: 3.2rem; color: #ffffff; margin: 30px 0 50px 0; cursor: pointer; transition: 0.5s ease; font-family: 'Amiri Quran', serif; }
-            .bismillah-v15:hover { color: ${this.config.systemHighlightColor}; transform: scale(1.03); }
-            .mushaf-grid-v15 { font-size: 2.7rem; font-family: 'Amiri Quran', serif; color: #f1f5f9; line-height: 4.5; text-align: justify; }
+            .bismillah-v15 { text-align: center; font-size: 3.2rem; color: #d4af37; margin: 30px 0 50px 0; cursor: pointer; transition: 0.5s ease; font-family: 'Amiri Quran', serif; }
+            .bismillah-v15:hover { color: #f59e0b; transform: scale(1.03); }
+            body.light .bismillah-v15 { color: #92400e !important; }
+            .mushaf-grid-v15 { font-size: 2.7rem; font-family: 'Amiri Quran', serif; color: #f1e8d5; line-height: 4.5; text-align: justify; }
+            body.light .mushaf-grid-v15 { color: #1a0a00 !important; }
             .ayah-unit-v15 { display: inline; border-radius: 12px; transition: 0.4s ease; padding: 8px 12px; position: relative; }
             .active-ayah-v15 { background: rgba(56, 189, 248, 0.18); color: ${this.config.systemHighlightColor} !important; box-shadow: 0 0 25px rgba(56, 189, 248, 0.2); }
             .ayah-ornament-v15 { color: ${this.config.systemAccentColor}; font-size: 2.2rem; margin: 0 18px; user-select: none; opacity: 0.9; }
@@ -471,10 +496,24 @@ class QuranPortal {
         if (this.dom.badgeBtn) this.dom.badgeBtn.onclick = () => { this._togglePanel('badgePanel'); if (!document.getElementById('badgePanel').classList.contains('hidden')) this._renderBadges(); };
         if (this.dom.calendarBtn) this.dom.calendarBtn.onclick = () => { this._togglePanel('calendarPanel'); if (!document.getElementById('calendarPanel').classList.contains('hidden')) this._renderCalendar(); };
         if (this.dom.shareBtn) this.dom.shareBtn.onclick = () => { this._togglePanel('sharePanel'); if (!document.getElementById('sharePanel').classList.contains('hidden')) this._initSharePanel(); };
+        // Yeni paneller
+        if (this.dom.tefsirBtn) this.dom.tefsirBtn.onclick = () => { this._togglePanel('tefsirPanel'); if (!document.getElementById('tefsirPanel').classList.contains('hidden')) this._initTefsirPanel(this.state.currentSurahId, this.state.currentAyahId||1); };
+        if (this.dom.esmaBtn) this.dom.esmaBtn.onclick = () => { this._togglePanel('esmaPanel'); if (!document.getElementById('esmaPanel').classList.contains('hidden')) this._initEsmaPanel(); };
+        if (this.dom.leaderboardBtn) this.dom.leaderboardBtn.onclick = () => { this._togglePanel('leaderboardPanel'); if (!document.getElementById('leaderboardPanel').classList.contains('hidden')) this._initLeaderboard(); };
+        if (this.dom.hatimBtn) this.dom.hatimBtn.onclick = () => { this._togglePanel('hatimPanel'); if (!document.getElementById('hatimPanel').classList.contains('hidden')) this._initHatimGroup(); };
+        if (this.dom.notifBtn) this.dom.notifBtn.onclick = () => { this._togglePanel('notifPanel'); if (!document.getElementById('notifPanel').classList.contains('hidden')) this._initNotifications(); };
+        if (this.dom.offlineBtn) this.dom.offlineBtn.onclick = () => { this._togglePanel('offlinePanel'); if (!document.getElementById('offlinePanel').classList.contains('hidden')) this._initOfflinePanel(); };
+        // Bubble page 2 extra butonlar
+        const adminBtn2 = document.getElementById('bubbleAdminBtn');
+        if (adminBtn2) adminBtn2.onclick = () => { document.getElementById('adminPanelOverlay')?.classList.remove('hidden'); setTimeout(close,80); };
+        const profileBtn = document.getElementById('bubbleProfileBtn');
+        if (profileBtn) profileBtn.onclick = () => { this._showToast('👤 Profil yakında eklenecek!', '#38bdf8'); };
+        const themeBtn2 = document.getElementById('bubbleTheme2Btn');
+        if (themeBtn2) themeBtn2.onclick = () => { this.toggleSystemTheme(); setTimeout(close,80); };
     }
 
     _togglePanel(panelId) {
-        ['hifzPanel','statsPanel','zikrPanel','gamesPanel','prayerPanel','duaPanel','bookmarkPanel','searchVersePanel','badgePanel','calendarPanel','sharePanel'].forEach(id => {
+        ['hifzPanel','statsPanel','zikrPanel','gamesPanel','prayerPanel','duaPanel','bookmarkPanel','searchVersePanel','badgePanel','calendarPanel','sharePanel','tefsirPanel','esmaPanel','leaderboardPanel','hatimPanel','notifPanel','offlinePanel'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             if (id === panelId) {
@@ -581,6 +620,10 @@ class QuranPortal {
 
         try {
             const surahData = await this._fetchSurahWithCache(surahId);
+            if (!surahData) {
+                this.dom.mainDisplay.innerHTML = `<div style="color:#f87171;font-family:sans-serif;text-align:center;padding:40px;font-size:1rem">⚠️ Sure yüklenemedi. İnternet bağlantınızı kontrol edin veya sayfayı yenileyin.</div>`;
+                return;
+            }
             this.state.currentSurahId = surahId;
             this.dom.mainDisplay.innerHTML = "";
 
@@ -776,6 +819,11 @@ class QuranPortal {
                 this.state.currentAyahId = ayahId;
                 this._synchronizeUI(ayahId);
                 this._trackAyahPlayed(surahId);
+                if (ayahId > 0) this._saveReadingPosition(surahId, ayahId);
+                // 🎤 Karaoke
+                if (this.state.karaokeActive && ayahId > 0) {
+                    this._startKaraokeForAyah(surahId, ayahId);
+                }
             })
             .catch(() => this.log("Ses dosyası eksik.", "error"));
     }
@@ -792,14 +840,23 @@ class QuranPortal {
 
     async _trackAyahPlayed(surahId) {
         const stats = await this._loadStats();
-        stats.ayahCount = (stats.ayahCount || 0) + 1;
+        const prevCount = stats.ayahCount || 0;
+        stats.ayahCount = prevCount + 1;
         const set = new Set(stats.surahsOpened || []);
+        const prevSurahs = set.size;
         set.add(surahId);
         stats.surahsOpened = [...set];
         const today = new Date().toDateString();
         if (stats.goalDate !== today) { stats.goalDate = today; stats.todayAyahs = 0; }
         stats.todayAyahs = (stats.todayAyahs || 0) + 1;
         await this._saveStats(stats);
+        // 🎊 Kilometre taşı kutlaması
+        const milestones = {100:'100 ayet dinlediniz! 🎵', 500:'500 ayet! Harika! ⭐', 1000:'1000 ayet! Muhteşem! 🌟'};
+        if (milestones[stats.ayahCount]) this._showCelebration(milestones[stats.ayahCount]);
+        if (set.size !== prevSurahs) {
+            const sureMilestones = {1:'İlk sureyi açtınız! 🌱', 10:'10 sure! 📖', 57:'Yarı Kur\'an! 🌙', 114:'HATİM! Tebrikler! 🏆'};
+            if (sureMilestones[set.size]) this._showCelebration(sureMilestones[set.size]);
+        }
     }
 
     _handleAutoProgress() {
@@ -808,8 +865,137 @@ class QuranPortal {
         if (meta && nextId <= meta.ayahCount) this.playAyah(this.state.currentSurahId, nextId);
     }
 
+    // ============================================================
+    // 🎤 KARAOKE — KELİME KELİME VURGULAMA
+    // ============================================================
+
+    async _toggleKaraoke() {
+        this.state.karaokeActive = !this.state.karaokeActive;
+        const btn = document.getElementById('karaokeToggleBtn');
+        if (btn) {
+            btn.style.background = this.state.karaokeActive ? '#d4af37' : '';
+            btn.textContent = this.state.karaokeActive ? '🎤 Karaoke: Açık' : '🎤 Karaoke: Kapalı';
+        }
+        // Bubble menu karaoke butonunu da güncelle
+        const menuBtn = document.getElementById('karaokeMenuBtn');
+        if (menuBtn) {
+            const icon = menuBtn.querySelector('.bubble-btn-icon');
+            const label = menuBtn.querySelector('.bubble-btn-label');
+            if (icon) icon.textContent = this.state.karaokeActive ? '🎤' : '🎤';
+            if (label) label.textContent = this.state.karaokeActive ? 'Karaoke ✓' : 'Karaoke';
+            menuBtn.style.background = this.state.karaokeActive ? 'rgba(212,175,55,0.2)' : '';
+            menuBtn.style.borderColor = this.state.karaokeActive ? '#d4af37' : '';
+        }
+        if (this.state.karaokeActive) {
+            // Şu an çalan ayet varsa hemen başlat
+            if (!this.state.audioPlayer.paused && this.state.currentSurahId && this.state.currentAyahId > 0) {
+                await this._startKaraokeForAyah(this.state.currentSurahId, this.state.currentAyahId);
+            }
+            this._showToast('🎤 Karaoke modu açıldı', '#d4af37');
+        } else {
+            this._stopKaraoke();
+            this._showToast('🎤 Karaoke modu kapatıldı', '#64748b');
+        }
+    }
+
+    async _loadKaraokeTiming(surahId) {
+        // Zaten yüklüyse tekrar yükleme
+        if (this.state.karaokeTimings && this.state.karaokeTimings._surahId === surahId) {
+            return this.state.karaokeTimings;
+        }
+        try {
+            // Quran Foundation API — reciter 7 = Mishary Alafasy (segments destekliyor)
+            const reciterId = 7;
+            const url = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}?per_page=300&fields=segments`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('API hatası');
+            const json = await res.json();
+            // audio_files dizisini verse_key → segments map'ine çevir
+            const map = { _surahId: surahId };
+            (json.audio_files || []).forEach(af => {
+                if (af.segments && af.segments.length) {
+                    map[af.verse_key] = af.segments; // [[wordIdx, startMs, endMs], ...]
+                }
+            });
+            this.state.karaokeTimings = map;
+            return map;
+        } catch (e) {
+            // API başarısız → eşit dağılım fallback
+            return null;
+        }
+    }
+
+    async _startKaraokeForAyah(surahId, ayahId) {
+        // Önceki RAF'ı temizle
+        if (this.state.karaokeRAF) cancelAnimationFrame(this.state.karaokeRAF);
+        this._clearWordHighlights();
+
+        const timings = await this._loadKaraokeTiming(surahId);
+        const verseKey = `${surahId}:${ayahId}`;
+        this.state.karaokeCurrentKey = verseKey;
+
+        const unit = document.getElementById(`ayah-unit-v15-${ayahId}`);
+        if (!unit) return;
+        const wordSpans = unit.querySelectorAll('.ayah-word');
+        if (!wordSpans.length) return;
+
+        let segments = timings ? timings[verseKey] : null;
+
+        // Fallback: segment yoksa eşit böl
+        if (!segments || !segments.length) {
+            const audio = this.state.audioPlayer;
+            // Ayetin toplam süresini bilmiyoruz, tahmini yap
+            const totalWords = wordSpans.length;
+            const dur = audio.duration || 5;
+            const msPerWord = (dur * 1000) / totalWords;
+            segments = Array.from({length: totalWords}, (_, i) => [i + 1, i * msPerWord, (i + 1) * msPerWord]);
+        }
+
+        // Segment map: wordIndex (1-based) → {start, end} ms
+        const segMap = {};
+        segments.forEach(([wi, start, end]) => { segMap[wi] = { start, end }; });
+
+        const audio = this.state.audioPlayer;
+        let lastHighlighted = -1;
+
+        const tick = () => {
+            if (!this.state.karaokeActive || this.state.karaokeCurrentKey !== verseKey) return;
+            if (audio.paused) { this.state.karaokeRAF = requestAnimationFrame(tick); return; }
+
+            const nowMs = audio.currentTime * 1000;
+            let found = -1;
+            for (let i = 1; i <= wordSpans.length; i++) {
+                const seg = segMap[i];
+                if (seg && nowMs >= seg.start && nowMs <= seg.end) { found = i - 1; break; }
+            }
+
+            if (found !== lastHighlighted) {
+                wordSpans.forEach((s, i) => {
+                    s.classList.toggle('karaoke-active', i === found);
+                    s.classList.toggle('karaoke-past', i < found);
+                });
+                lastHighlighted = found;
+            }
+            this.state.karaokeRAF = requestAnimationFrame(tick);
+        };
+        this.state.karaokeRAF = requestAnimationFrame(tick);
+    }
+
+    _stopKaraoke() {
+        if (this.state.karaokeRAF) { cancelAnimationFrame(this.state.karaokeRAF); this.state.karaokeRAF = null; }
+        this._clearWordHighlights();
+    }
+
+    _clearWordHighlights() {
+        document.querySelectorAll('.karaoke-active, .karaoke-past').forEach(el => {
+            el.classList.remove('karaoke-active', 'karaoke-past');
+        });
+    }
+
     _stopSystemAudio() {
         this.state.audioPlayer.pause();
+        // Karaoke durdur
+        if (this.state.karaokeActive) this._stopKaraoke();
         // currentTime sıfırlanmıyor — Devam Et kaldığı yerden başlar
     }
 
@@ -1300,13 +1486,24 @@ class QuranPortal {
         }
         try {
             const data = await this._fetchSurahWithCache(targetSurah);
-            const arabic = data.verse[`verse_${targetAyah}`] || '';
-            const meal = this.state.mealCache && this.state.mealCache[targetSurah] ?
-                ((this.state.mealCache[targetSurah].find(v => v.verse === targetAyah) || {}).text || '') : '';
-            document.getElementById('dailyVerseArabic').textContent = arabic;
-            document.getElementById('dailyVerseMeal').textContent = meal;
-            document.getElementById('dailyVerseRef').textContent = `${data.name} Suresi — ${targetAyah}. Ayet`;
-        } catch(e) { if (box) box.style.display = 'none'; }
+            if (!data) return;
+            const arabic = data.verse?.[`verse_${targetAyah}`] || '';
+            // mealCache bekle — yüklenmemişse tekrar dene
+            if (!this.state.mealCache) {
+                await this._loadMealDatabase();
+            }
+            const meal = this.state.mealCache?.[targetSurah] ?
+                (this.state.mealCache[targetSurah].find(v => v.verse === targetAyah)?.text || '') : '';
+            const arabicEl = document.getElementById('dailyVerseArabic');
+            const mealEl   = document.getElementById('dailyVerseMeal');
+            const refEl    = document.getElementById('dailyVerseRef');
+            if (arabicEl) arabicEl.textContent = arabic;
+            if (mealEl)   mealEl.textContent   = meal || '(meal yüklenemedi)';
+            if (refEl)    refEl.textContent     = `${data.name} Suresi — ${targetAyah}. Ayet`;
+            box.style.display = '';
+        } catch(e) {
+            console.warn('Günün ayeti yüklenemedi:', e);
+        }
     }
 
     // ============================================================
@@ -1322,17 +1519,23 @@ class QuranPortal {
                     this.state.surahMetadata.push({ id, name: d.name, ayahCount: Object.keys(d.verse).length });
                     if (this.dom.surahSel) this.dom.surahSel.add(new Option(`${id}. ${d.name}`, id));
                 }
-            })));
+            }).catch(() => {})));
         }
         this.state.surahMetadata.sort((a,b) => a.id - b.id);
     }
 
     async _fetchSurahWithCache(id) {
         if (this.state.surahCache.has(id)) return this.state.surahCache.get(id);
-        const r = await fetch(`data/surah/surah_${id}.json`);
-        const d = await r.json();
-        this.state.surahCache.set(id, d);
-        return d;
+        try {
+            const r = await fetch(`data/surah/surah_${id}.json`);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const d = await r.json();
+            this.state.surahCache.set(id, d);
+            return d;
+        } catch(e) {
+            this.log(`Sure ${id} yüklenemedi: ${e.message}`, 'warn');
+            return null;
+        }
     }
 
     async _loadMealDatabase() {
@@ -1398,7 +1601,11 @@ class QuranPortal {
     }
 
     _applyInitialSystemTheme() { if (this.state.theme === 'light') this.dom.body.classList.add('light'); }
-    toggleSystemTheme() { const isL = this.dom.body.classList.toggle('light'); this.state.theme = isL ? 'light' : 'dark'; localStorage.setItem('portal_theme', this.state.theme); }
+    toggleSystemTheme() {
+        const isL = this.dom.body.classList.toggle('light');
+        this.state.theme = isL ? 'light' : 'dark';
+        localStorage.setItem('portal_theme', this.state.theme); // Manuel seçim — auto-theme bunu görünce dokunmaz
+    }
     _initHistory() { return JSON.parse(localStorage.getItem('qp_history') || '[]'); }
     _verifySystemIntegrity() { return Promise.resolve(true); }
     _handleCriticalError(m, err) { console.error(`[QURAN PORTAL] ERROR:`, m, err); }
@@ -1491,7 +1698,7 @@ class QuranPortal {
         }
         opts.sort(() => Math.random() - 0.5);
         document.getElementById('surahOrderQ').innerHTML =
-            `<div class="quiz-sub">Bu sure Kur'an'da kaçıncı suredir?</div><div class="quiz-big">${correct.name}</div>`;
+            `<div class="quiz-sub">Bu sure Kur\'an'da kaçıncı suredir?</div><div class="quiz-big">${correct.name}</div>`;
         const div = document.getElementById('surahOrderOptions');
         div.innerHTML = '';
         opts.forEach(n => {
@@ -1954,7 +2161,7 @@ class QuranPortal {
             const types=['ayah','position'];
             const t=types[Math.floor(Math.random()*types.length)];
             if (t==='ayah') statement=`${surah.name} suresinde ${surah.ayahCount} ayet vardır.`;
-            else statement=`${surah.name} suresi Kur'an'da ${surah.id}. suredir.`;
+            else statement=`${surah.name} suresi Kur\'an'da ${surah.id}. suredir.`;
         } else {
             const wrong=surah.ayahCount+Math.floor(Math.random()*20)+5;
             statement=`${surah.name} suresinde ${wrong} ayet vardır.`;
@@ -2029,20 +2236,43 @@ class QuranPortal {
         if (fillEl) fillEl.style.width = pct+'%';
 
         const BADGES = [
-            { id:'first_surah',  icon:'🌱', name:'İlk Adım',     desc:'İlk sureyi oku',            cond: opened>=1 },
-            { id:'five_surahs',  icon:'📚', name:'Beş Sure',      desc:'5 sure oku',                cond: opened>=5 },
-            { id:'ten_surahs',   icon:'📖', name:'On Sure',       desc:'10 sure oku',               cond: opened>=10 },
-            { id:'half_quran',   icon:'🌙', name:'Yarı Kur\'an',  desc:'57 sure oku',               cond: opened>=57 },
-            { id:'full_quran',   icon:'🏆', name:'Hatim',         desc:'Tüm 114 sureyi oku',        cond: opened>=114 },
-            { id:'first_ayah',   icon:'🎵', name:'İlk Ses',       desc:'İlk ayeti dinle',           cond: (stats.ayahCount||0)>=1 },
-            { id:'100_ayahs',    icon:'💯', name:'100 Ayet',      desc:'100 ayet dinle',            cond: (stats.ayahCount||0)>=100 },
-            { id:'500_ayahs',    icon:'⭐', name:'500 Ayet',      desc:'500 ayet dinle',            cond: (stats.ayahCount||0)>=500 },
-            { id:'hifz_start',   icon:'🧠', name:'Hafız Adayı',   desc:'İlk hafızlık seansı',       cond: (stats.hifzCount||0)>=1 },
-            { id:'hifz_10',      icon:'🎓', name:'10 Seans',      desc:'10 hafızlık seansı',        cond: (stats.hifzCount||0)>=10 },
-            { id:'zikr_100',     icon:'📿', name:'100 Zikir',     desc:'100 zikir çek',             cond: (stats.zikrTotal||0)>=100 },
-            { id:'daily_goal',   icon:'🎯', name:'Hedef Tutan',   desc:'Günlük hedefe ulaş',        cond: (stats.todayAyahs||0)>=(stats.dailyGoal||10) },
-            { id:'hour_listen',  icon:'⏱️', name:'1 Saat',        desc:'1 saat dinle',              cond: (stats.listenSeconds||0)>=3600 },
-            { id:'day_streak',   icon:'🔥', name:'Kararlı',       desc:'3 gün üst üste giriş',      cond: (stats.streakDays||0)>=3 },
+            // Okuma rozetleri
+            { id:'first_surah',   icon:'🌱', name:'İlk Adım',       desc:'1 sure oku',                  cond: opened>=1 },
+            { id:'three_surahs',  icon:'📗', name:'Üç Sure',        desc:'3 sure oku',                  cond: opened>=3 },
+            { id:'five_surahs',   icon:'📚', name:'Beş Sure',       desc:'5 sure oku',                  cond: opened>=5 },
+            { id:'ten_surahs',    icon:'📖', name:'On Sure',        desc:'10 sure oku',                 cond: opened>=10 },
+            { id:'twenty_surahs', icon:'📕', name:'Yirmi Sure',     desc:'20 sure oku',                 cond: opened>=20 },
+            { id:'half_quran',    icon:'🌙', name:'Yarı Kur\'an',   desc:'57 sure oku',                 cond: opened>=57 },
+            { id:'full_quran',    icon:'🏆', name:'Hatim',          desc:'Tüm 114 sureyi oku',          cond: opened>=114 },
+            // Dinleme rozetleri
+            { id:'first_ayah',    icon:'🎵', name:'İlk Ses',        desc:'1 ayet dinle',                cond: (stats.ayahCount||0)>=1 },
+            { id:'10_ayahs',      icon:'🔉', name:'10 Ayet',        desc:'10 ayet dinle',               cond: (stats.ayahCount||0)>=10 },
+            { id:'50_ayahs',      icon:'🎶', name:'50 Ayet',        desc:'50 ayet dinle',               cond: (stats.ayahCount||0)>=50 },
+            { id:'100_ayahs',     icon:'💯', name:'100 Ayet',       desc:'100 ayet dinle',              cond: (stats.ayahCount||0)>=100 },
+            { id:'500_ayahs',     icon:'⭐', name:'500 Ayet',       desc:'500 ayet dinle',              cond: (stats.ayahCount||0)>=500 },
+            { id:'1000_ayahs',    icon:'🌟', name:'1000 Ayet',      desc:'1000 ayet dinle',             cond: (stats.ayahCount||0)>=1000 },
+            // Süre rozetleri
+            { id:'min_listen',    icon:'⏱️', name:'30 Dakika',      desc:'30 dk dinle',                 cond: (stats.listenSeconds||0)>=1800 },
+            { id:'hour_listen',   icon:'⌛', name:'1 Saat',         desc:'1 saat dinle',                cond: (stats.listenSeconds||0)>=3600 },
+            { id:'5hour_listen',  icon:'🕐', name:'5 Saat',         desc:'5 saat dinle',                cond: (stats.listenSeconds||0)>=18000 },
+            // Hafızlık rozetleri
+            { id:'hifz_start',    icon:'🧠', name:'Hafız Adayı',    desc:'1 hafızlık seansı',           cond: (stats.hifzCount||0)>=1 },
+            { id:'hifz_5',        icon:'📝', name:'5 Seans',        desc:'5 hafızlık seansı',           cond: (stats.hifzCount||0)>=5 },
+            { id:'hifz_10',       icon:'🎓', name:'10 Seans',       desc:'10 hafızlık seansı',          cond: (stats.hifzCount||0)>=10 },
+            { id:'hifz_30',       icon:'🎖️', name:'30 Seans',       desc:'30 hafızlık seansı',          cond: (stats.hifzCount||0)>=30 },
+            // Zikir rozetleri
+            { id:'zikr_33',       icon:'📿', name:'33 Zikir',       desc:'33 zikir çek',                cond: (stats.zikrTotal||0)>=33 },
+            { id:'zikr_100',      icon:'💎', name:'100 Zikir',      desc:'100 zikir çek',               cond: (stats.zikrTotal||0)>=100 },
+            { id:'zikr_1000',     icon:'👑', name:'1000 Zikir',     desc:'1000 zikir çek',              cond: (stats.zikrTotal||0)>=1000 },
+            // Hedef rozetleri
+            { id:'daily_goal',    icon:'🎯', name:'Hedef Tutan',    desc:'Günlük hedefe ulaş',          cond: (stats.todayAyahs||0)>=(stats.dailyGoal||10) },
+            { id:'day_streak3',   icon:'🔥', name:'3 Gün Streak',   desc:'3 gün üst üste giriş',        cond: (stats.streakDays||0)>=3 },
+            { id:'day_streak7',   icon:'🔥', name:'7 Gün Streak',   desc:'7 gün üst üste giriş',        cond: (stats.streakDays||0)>=7 },
+            { id:'day_streak30',  icon:'💫', name:'30 Gün Streak',  desc:'30 gün üst üste giriş',       cond: (stats.streakDays||0)>=30 },
+            // Özel
+            { id:'ramadan',       icon:'🌙', name:'Ramazan Ruhu',   desc:'Ramazan ayında giriş yap',    cond: new Date().getMonth()===2 },
+            { id:'early_bird',    icon:'🌅', name:'Sabah Namazı',   desc:'Sabah 5-7 arası oku',         cond: (()=>{ const h=new Date().getHours(); return h>=5&&h<7; })() },
+            { id:'night_reader',  icon:'🌃', name:'Gece Okuyanı',   desc:'Gece 22-02 arası oku',        cond: (()=>{ const h=new Date().getHours(); return h>=22||h<2; })() },
         ];
 
         el.innerHTML = BADGES.map(b => `
@@ -2116,7 +2346,7 @@ class QuranPortal {
         const surahData = this.state.surahCache.get(surahId);
         const arabic = surahData?.verse[`verse_${ayahId}`] || '';
         const meal = this.state.mealCache?.[surahId]?.find(v=>v.verse===ayahId)?.text || '';
-        const shareText = `${arabic}\n\n"${meal}"\n\n📖 ${surahName} Suresi - ${ayahId}. Ayet\nKur'an-ı Kerim Oku`;
+        const shareText = `${arabic}\n\n"${meal}"\n\n📖 ${surahName} Suresi - ${ayahId}. Ayet\nKur\'an-ı Kerim Oku`;
         preview.innerHTML = `
             <div style="font-size:1.2rem;color:#e2e8f0;direction:rtl;font-family:'Amiri Quran',serif;margin-bottom:6px">${arabic||'Önce bir sure açıp ayet seçin'}</div>
             ${meal?`<div style="color:#94a3b8;font-size:0.82rem;direction:ltr;font-family:sans-serif">"${meal}"</div>`:''}
@@ -2166,6 +2396,254 @@ class QuranPortal {
         } catch(e) {}
     }
 
+    // ============================================================
+    // 💬 FLOATING BUBBLE MENÜ
+    // ============================================================
+    _initBubbleMenu() {
+        const menu    = document.getElementById('bubbleMenu');
+        const trigger = document.getElementById('bubbleTrigger');
+        const grid    = document.getElementById('bubbleGrid');
+        const wrapper = document.getElementById('bubblePagesWrapper');
+        if (!trigger || !grid || !menu) return;
+
+        let isOpen    = false;
+        let curPage   = 1;
+        const PAGES   = 3;
+        let menuDragX, menuDragY, menuOrigLeft, menuOrigBottom, menuDragging = false;
+
+        // ── SAYFA GEÇİŞİ (track kayma) ──
+        const track = document.getElementById('bubblePagesTrack');
+        const showPage = (n) => {
+            curPage = Math.max(1, Math.min(PAGES, n));
+            if (track) {
+                // Her sayfa wrapper'ın 1/3'ü kadar — sola kaydır
+                track.style.transform = `translateX(-${(curPage - 1) * (100 / 3)}%)`;
+            }
+            document.querySelectorAll('.bubble-dot').forEach((d, i) => {
+                d.classList.toggle('active', i + 1 === curPage);
+            });
+        };
+
+        // Noktalara tıkla
+        document.querySelectorAll('.bubble-dot').forEach(dot => {
+            dot.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showPage(parseInt(dot.dataset.page));
+            });
+        });
+
+        // ── AÇ / KAPAT ──
+        const open = () => {
+            isOpen = true;
+            grid.classList.remove('hidden');
+            trigger.classList.add('open');
+            trigger.querySelector('.bubble-trigger-icon').textContent = '✕';
+            const rect = menu.getBoundingClientRect();
+            grid.style.bottom = rect.top > window.innerHeight * 0.55 ? '70px' : 'auto';
+            grid.style.top    = rect.top > window.innerHeight * 0.55 ? 'auto' : '70px';
+            grid.style.right  = rect.left > 260 ? '0' : 'auto';
+            grid.style.left   = rect.left > 260 ? 'auto' : '0';
+            showPage(curPage);
+        };
+        const close = () => {
+            isOpen = false;
+            grid.classList.add('hidden');
+            trigger.classList.remove('open');
+            trigger.querySelector('.bubble-trigger-icon').textContent = '☰';
+        };
+
+        // ── TEK / ÇİFT TIKLAMA ──
+        let lastClickTime = 0;
+        trigger.addEventListener('click', (e) => {
+            if (menuDragging) return;
+            e.stopPropagation();
+            const now = Date.now();
+            if (now - lastClickTime < 380) {
+                close(); lastClickTime = 0;
+                this.playAyah(this.state.currentSurahId, 1);
+                this._showToast('▶️ Sure baştan oynatılıyor…', '#38bdf8');
+                return;
+            }
+            lastClickTime = now;
+            isOpen ? close() : open();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (isOpen && !menu.contains(e.target)) close();
+        });
+
+        // ── BALONCUĞU SÜRÜKLE (menü pozisyonu) ──
+        let dragStartX, dragStartY;
+        const onDragStart = (e) => {
+            if (!trigger.contains(e.target)) return;
+            menuDragging = false;
+            const t = e.touches ? e.touches[0] : e;
+            dragStartX = t.clientX; dragStartY = t.clientY;
+            const rect = menu.getBoundingClientRect();
+            menuOrigLeft   = rect.left;
+            menuOrigBottom = window.innerHeight - rect.bottom;
+            menu.style.right = 'auto'; menu.style.top = 'auto';
+            menu.style.left   = menuOrigLeft   + 'px';
+            menu.style.bottom = menuOrigBottom + 'px';
+            close();
+            e.preventDefault();
+        };
+        const onDragMove = (e) => {
+            if (dragStartX === undefined) return;
+            const t = e.touches ? e.touches[0] : e;
+            const dx = t.clientX - dragStartX, dy = t.clientY - dragStartY;
+            if (Math.abs(dx) > 6 || Math.abs(dy) > 6) menuDragging = true;
+            if (!menuDragging) return;
+            menu.style.left   = Math.max(0, Math.min(window.innerWidth  - 64, menuOrigLeft   + dx)) + 'px';
+            menu.style.bottom = Math.max(0, Math.min(window.innerHeight - 64, menuOrigBottom - dy)) + 'px';
+            e.preventDefault();
+        };
+        const onDragEnd = () => { dragStartX = dragStartY = undefined; };
+
+        trigger.addEventListener('mousedown',  onDragStart, { passive: false });
+        trigger.addEventListener('touchstart', onDragStart, { passive: false });
+        document.addEventListener('mousemove', onDragMove,  { passive: false });
+        document.addEventListener('touchmove', onDragMove,  { passive: false });
+        document.addEventListener('mouseup',   onDragEnd);
+        document.addEventListener('touchend',  onDragEnd);
+
+        // ── SAYFALARI SWIPE İLE GEÇ ──
+        let swipeStartX, swipeStartY, swipeActive = false;
+        const swipeTarget = track || wrapper;
+        if (swipeTarget) {
+            swipeTarget.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                swipeStartX = t.clientX; swipeStartY = t.clientY; swipeActive = true;
+            }, { passive: true });
+            swipeTarget.addEventListener('touchend', (e) => {
+                if (!swipeActive) return;
+                const dx = e.changedTouches[0].clientX - swipeStartX;
+                const dy = e.changedTouches[0].clientY - swipeStartY;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+                    showPage(dx < 0 ? curPage + 1 : curPage - 1);
+                }
+                swipeActive = false;
+            }, { passive: true });
+            // Mouse swipe (desktop)
+            let mouseSwipeX;
+            swipeTarget.addEventListener('mousedown', (e) => { mouseSwipeX = e.clientX; });
+            swipeTarget.addEventListener('mouseup', (e) => {
+                if (mouseSwipeX === undefined) return;
+                const dx = e.clientX - mouseSwipeX;
+                if (Math.abs(dx) > 40) showPage(dx < 0 ? curPage + 1 : curPage - 1);
+                mouseSwipeX = undefined;
+            });
+        }
+
+        // ── SAYFA 3 ÖZEL BUTONLARI ──
+        const themeBtn = document.getElementById('bubbleThemeBtn');
+        if (themeBtn) themeBtn.onclick = () => {
+            document.body.classList.toggle('light');
+            localStorage.setItem('qp_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+            setTimeout(close, 80);
+        };
+        const topBtn = document.getElementById('bubbleTopBtn');
+        if (topBtn) topBtn.onclick = () => { window.scrollTo({top:0,behavior:'smooth'}); setTimeout(close,80); };
+        const reloadBtn = document.getElementById('bubbleReloadBtn');
+        if (reloadBtn) reloadBtn.onclick = () => { if (confirm('Sayfayı yenile?')) location.reload(); };
+        const karaokeMenuBtn = document.getElementById('karaokeMenuBtn');
+        if (karaokeMenuBtn) karaokeMenuBtn.onclick = () => { this._toggleKaraoke(); setTimeout(close,80); };
+
+        // Buton tıklamada kapat
+        document.querySelectorAll('.bubble-btn').forEach(btn => {
+            if (!['bubbleThemeBtn','bubbleTheme2Btn','bubbleTopBtn','bubbleReloadBtn'].includes(btn.id))
+                btn.addEventListener('click', () => setTimeout(close, 80));
+        });
+    }
+    // ============================================================
+    // 🎤 KARAOKE — KELIME KELIME VURGULAMA
+    // ============================================================
+
+    async _karaokeStart(surahId, ayahId) {
+        // Önceki karaoke temizle
+        this._karaokeClear();
+        this.karaoke = { surahId, ayahId, timings: null, wordIndex: -1 };
+
+        // Kelime span'larını al
+        const unit = document.getElementById(`ayah-unit-v15-${ayahId}`);
+        if (!unit) return;
+        const words = unit.querySelectorAll('.ayah-word');
+        if (!words.length) return;
+        this.karaoke.words = words;
+
+        // 1) Everyayah timing API'sini dene
+        try {
+            const s = surahId.toString().padStart(3, '0');
+            const a = ayahId.toString().padStart(3, '0');
+            const url = `https://everyayah.com/data/Abdul_Basit_Murattal_192kbps/${s}${a}.mp3`;
+            // Timing verisi: everyayah word-by-word JSON
+            const timingUrl = `https://raw.githubusercontent.com/islamic-network/cdn/master/info/ayah-timings/${surahId}_${ayahId}.json`;
+            const res = await fetch(timingUrl, { signal: AbortSignal.timeout(3000) });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.words) {
+                    this.karaoke.timings = data.words.map(w => w.timestamp || w.start_time || 0);
+                    return; // timing var, _karaokeUpdate halleder
+                }
+            }
+        } catch(e) { /* API yok, tahmini moda geç */ }
+
+        // 2) Tahmini mod — ses süresi / kelime sayısı
+        this._karaokeEstimatedMode();
+    }
+
+    _karaokeEstimatedMode() {
+        // Ses yüklenince süreyi al, kelimelere eşit böl
+        const audio = this.state.audioPlayer;
+        const setupEstimate = () => {
+            const dur = audio.duration;
+            if (!dur || isNaN(dur)) return;
+            const words = this.karaoke.words;
+            const count  = words.length;
+            // Her kelimeye eşit süre
+            this.karaoke.timings = Array.from({length: count}, (_, i) => (dur / count) * i);
+        };
+        if (audio.duration && !isNaN(audio.duration)) {
+            setupEstimate();
+        } else {
+            audio.addEventListener('loadedmetadata', setupEstimate, { once: true });
+            audio.addEventListener('canplay', setupEstimate, { once: true });
+        }
+    }
+
+    _karaokeUpdate() {
+        if (!this.karaoke || !this.karaoke.timings || !this.karaoke.words) return;
+        const t = this.state.audioPlayer.currentTime;
+        const timings = this.karaoke.timings;
+        const words   = this.karaoke.words;
+
+        // Hangi kelime oynuyor?
+        let idx = 0;
+        for (let i = 0; i < timings.length; i++) {
+            if (t >= timings[i]) idx = i;
+            else break;
+        }
+
+        if (idx === this.karaoke.wordIndex) return; // değişmedi
+        this.karaoke.wordIndex = idx;
+
+        // Önceki vurguyu kaldır
+        words.forEach(w => w.classList.remove('karaoke-active', 'karaoke-done'));
+
+        // Geçmiş kelimeleri "done", aktifi "active" yap
+        words.forEach((w, i) => {
+            if (i < idx)  w.classList.add('karaoke-done');
+            if (i === idx) w.classList.add('karaoke-active');
+        });
+    }
+
+    _karaokeClear() {
+        if (this.karaoke && this.karaoke.words) {
+            this.karaoke.words.forEach(w => w.classList.remove('karaoke-active', 'karaoke-done'));
+        }
+        this.karaoke = null;
+    }
+
     _logBranding() { console.log("%c🕋 QURAN PORTAL v18.0 %cFIREBASE EDITION", "color: #38bdf8; font-size: 24px; font-weight: bold;", "color: #d4af37; font-size: 14px;"); }
 
     async _loadSiteBanner() {
@@ -2188,14 +2666,612 @@ class QuranPortal {
         } catch(e) { /* sessiz */ }
     }
 
+
+    // ============================================================
+    // 📖 TEFSİR PANELİ
+    // ============================================================
+    async _initTefsirPanel(surahId, ayahId) {
+        const panel = document.getElementById('tefsirPanel');
+        if (!panel) return;
+        panel.classList.remove('hidden');
+        const content = document.getElementById('tefsirContent');
+        if (!content) return;
+        content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Tefsir yükleniyor...</div>';
+        try {
+            const res = await fetch(`https://api.quran.com/api/v4/tafsirs/tr-diyanet-isleri/by_ayah/${surahId}:${ayahId}`);
+            if (!res.ok) throw new Error();
+            const json = await res.json();
+            const text = json.tafsir?.text || '';
+            const clean = text.replace(/<[^>]+>/g,'').trim();
+            const meta = this.state.surahMetadata.find(m=>m.id===surahId);
+            content.innerHTML = `
+                <div style="font-family:sans-serif;direction:ltr">
+                    <div style="color:#d4af37;font-weight:bold;font-size:0.9rem;margin-bottom:10px">
+                        📖 ${meta?.name||'Sure'} Suresi — ${ayahId}. Ayet Tefsiri
+                    </div>
+                    <div style="color:#e2e8f0;font-size:0.88rem;line-height:1.9;border-left:3px solid #d4af37;padding-left:12px">
+                        ${clean||'Bu ayet için tefsir bulunamadı.'}
+                    </div>
+                    <div style="color:#64748b;font-size:0.72rem;margin-top:10px">Kaynak: Diyanet İşleri Tefsiri</div>
+                </div>`;
+        } catch(e) {
+            content.innerHTML = `<div style="color:#f87171;font-family:sans-serif;font-size:0.85rem;padding:10px">❌ Tefsir yüklenemedi. İnternet bağlantınızı kontrol edin.</div>`;
+        }
+    }
+
+    // ============================================================
+    // 🗣️ ESMAÜL HÜSNA PANELİ
+    // ============================================================
+    _initEsmaPanel() {
+        const esma = [
+            {ar:"الرَّحْمَنُ",tr:"Er-Rahman",mean:"Sonsuz merhamet sahibi"},
+            {ar:"الرَّحِيمُ",tr:"Er-Rahim",mean:"Çok bağışlayıcı, merhamet eden"},
+            {ar:"الْمَلِكُ",tr:"El-Melik",mean:"Mülkün sahibi, hükümdar"},
+            {ar:"الْقُدُّوسُ",tr:"El-Kuddüs",mean:"Her türlü eksiklikten münezzeh"},
+            {ar:"السَّلَامُ",tr:"Es-Selam",mean:"Her türlü tehlikeden emin kılan"},
+            {ar:"الْمُؤْمِنُ",tr:"El-Mü\'min",mean:"Güven veren, inanan"},
+            {ar:"الْمُهَيْمِنُ",tr:"El-Müheymin",mean:"Her şeyi gözetip koruyan"},
+            {ar:"الْعَزِيزُ",tr:"El-Aziz",mean:"İzzet sahibi, üstün, güçlü"},
+            {ar:"الْجَبَّارُ",tr:"El-Cebbar",mean:"Her şeye galip gelen"},
+            {ar:"الْمُتَكَبِّرُ",tr:"El-Mütekebbir",mean:"Kibriya ve azamet sahibi"},
+            {ar:"الْخَالِقُ",tr:"El-Halik",mean:"Her şeyi yaratan"},
+            {ar:"الْبَارِئُ",tr:"El-Bari\'",mean:"Eşsiz şekilde yaratan"},
+            {ar:"الْمُصَوِّرُ",tr:"El-Musavvir",mean:"Her şeye şekil veren"},
+            {ar:"الْغَفَّارُ",tr:"El-Gaffar",mean:"Çok affeden, mağfiret eden"},
+            {ar:"الْقَهَّارُ",tr:"El-Kahhar",mean:"Her şeye hakim olan"},
+            {ar:"الْوَهَّابُ",tr:"El-Vehhab",mean:"Karşılıksız veren"},
+            {ar:"الرَّزَّاقُ",tr:"Er-Rezzak",mean:"Rızık veren"},
+            {ar:"الْفَتَّاحُ",tr:"El-Fettah",mean:"Her şeyi açan, müşkülleri gideren"},
+            {ar:"الْعَلِيمُ",tr:"El-Alim",mean:"Her şeyi bilen"},
+            {ar:"الْقَابِضُ",tr:"El-Kabız",mean:"Daraltan, alan"},
+            {ar:"الْبَاسِطُ",tr:"El-Basit",mean:"Genişleten, veren"},
+            {ar:"الْخَافِضُ",tr:"El-Hafıd",mean:"Alçaltan"},
+            {ar:"الرَّافِعُ",tr:"Er-Rafi\'",mean:"Yükselten"},
+            {ar:"الْمُعِزُّ",tr:"El-Muizz",mean:"İzzet veren"},
+            {ar:"الْمُذِلُّ",tr:"El-Müzill",mean:"Zillete düşüren"},
+            {ar:"السَّمِيعُ",tr:"Es-Semi'",mean:"Her şeyi işiten"},
+            {ar:"الْبَصِيرُ",tr:"El-Basir",mean:"Her şeyi gören"},
+            {ar:"الْحَكَمُ",tr:"El-Hakem",mean:"Hükmeden, hakim"},
+            {ar:"الْعَدْلُ",tr:"El-Adl",mean:"Mutlak adalet sahibi"},
+            {ar:"اللَّطِيفُ",tr:"El-Latif",mean:"Her şeyin inceliğini bilen, lütufkâr"},
+            {ar:"الْخَبِيرُ",tr:"El-Habir",mean:"Her şeyden haberdar olan"},
+            {ar:"الْحَلِيمُ",tr:"El-Halim",mean:"Cezalandırmada acele etmeyen"},
+            {ar:"الْعَظِيمُ",tr:"El-Azim",mean:"Yüceliği sonsuz olan"},
+            {ar:"الْغَفُورُ",tr:"El-Gafur",mean:"Çok affeden"},
+            {ar:"الشَّكُورُ",tr:"Eş-Şekur",mean:"Az amele çok sevap veren"},
+            {ar:"الْعَلِيُّ",tr:"El-Aliyy",mean:"Yüce, yüksek"},
+            {ar:"الْكَبِيرُ",tr:"El-Kebir",mean:"Büyüklükte sonsuz olan"},
+            {ar:"الْحَفِيظُ",tr:"El-Hafız",mean:"Her şeyi koruyan"},
+            {ar:"الْمُقِيتُ",tr:"El-Mukit",mean:"Rızık ve kuvvet veren"},
+            {ar:"الْحَسِيبُ",tr:"El-Hasib",mean:"Hesap gören"},
+            {ar:"الْجَلِيلُ",tr:"El-Celil",mean:"Celal sahibi, yüce"},
+            {ar:"الْكَرِيمُ",tr:"El-Kerim",mean:"Çok cömert, ikram eden"},
+            {ar:"الرَّقِيبُ",tr:"Er-Rakib",mean:"Her şeyi gözetip izleyen"},
+            {ar:"الْمُجِيبُ",tr:"El-Mücib",mean:"Duaları kabul eden"},
+            {ar:"الْوَاسِعُ",tr:"El-Vasi\'",mean:"Rahmeti her şeyi kuşatan"},
+            {ar:"الْحَكِيمُ",tr:"El-Hakim",mean:"Hikmeti sonsuz olan"},
+            {ar:"الْوَدُودُ",tr:"El-Vedud",mean:"Çok seven, sevilen"},
+            {ar:"الْمَجِيدُ",tr:"El-Mecid",mean:"Şan ve şeref sahibi"},
+            {ar:"الْبَاعِثُ",tr:"El-Bais",mean:"Ölüleri dirilten"},
+            {ar:"الشَّهِيدُ",tr:"Eş-Şehid",mean:"Her şeye şahit olan"},
+            {ar:"الْحَقُّ",tr:"El-Hakk",mean:"Varlığı zorunlu, değişmez olan"},
+            {ar:"الْوَكِيلُ",tr:"El-Vekil",mean:"Her şeyin yöneticisi"},
+            {ar:"الْقَوِيُّ",tr:"El-Kaviyy",mean:"Güç ve kuvvet sahibi"},
+            {ar:"الْمَتِينُ",tr:"El-Metin",mean:"Kuvveti pek sağlam olan"},
+            {ar:"الْوَلِيُّ",tr:"El-Veliyy",mean:"Dost, yardımcı"},
+            {ar:"الْحَمِيدُ",tr:"El-Hamid",mean:"Övülmeye layık olan"},
+            {ar:"الْمُحْصِي",tr:"El-Muhsi",mean:"Her şeyi sayan, bilen"},
+            {ar:"الْمُبْدِئُ",tr:"El-Mübdi\'",mean:"Yoktan var eden"},
+            {ar:"الْمُعِيدُ",tr:"El-Muid",mean:"Yeniden yaratan"},
+            {ar:"الْمُحْيِي",tr:"El-Muhyi",mean:"Hayat veren"},
+            {ar:"الْمُمِيتُ",tr:"El-Mümit",mean:"Ölümü yaratan"},
+            {ar:"الْحَيُّ",tr:"El-Hayy",mean:"Diri, ölümsüz"},
+            {ar:"الْقَيُّومُ",tr:"El-Kayyum",mean:"Her şeyi ayakta tutan"},
+            {ar:"الْوَاجِدُ",tr:"El-Vacid",mean:"Her şeyi bulan"},
+            {ar:"الْمَاجِدُ",tr:"El-Macid",mean:"Kerem ve şan sahibi"},
+            {ar:"الْواحِدُ",tr:"El-Vahid",mean:"Tek, eşi benzeri olmayan"},
+            {ar:"الصَّمَدُ",tr:"Es-Samed",mean:"Her şey ona muhtaç, o kimseye muhtaç değil"},
+            {ar:"الْقَادِرُ",tr:"El-Kadir",mean:"Gücü her şeye yeten"},
+            {ar:"الْمُقْتَدِرُ",tr:"El-Muktedir",mean:"İstediği gibi tasarruf eden"},
+            {ar:"الْمُقَدِّمُ",tr:"El-Mukaddim",mean:"Öne geçiren"},
+            {ar:"الْمُؤَخِّرُ",tr:"El-Muahhir",mean:"Geriye bırakan"},
+            {ar:"الْأَوَّلُ",tr:"El-Evvel",mean:"İlk, başlangıcı olmayan"},
+            {ar:"الْآخِرُ",tr:"El-Ahir",mean:"Son, sonu olmayan"},
+            {ar:"الظَّاهِرُ",tr:"Ez-Zahir",mean:"Varlığı açık, aşikâr"},
+            {ar:"الْبَاطِنُ",tr:"El-Batın",mean:"Gizli, her şeyin iç yüzünü bilen"},
+            {ar:"الْوَالِي",tr:"El-Vali",mean:"Mülkün sahibi ve yöneticisi"},
+            {ar:"الْمُتَعَالِي",tr:"El-Müteali",mean:"Çok yüce"},
+            {ar:"الْبَرُّ",tr:"El-Berr",mean:"İyilik kaynağı"},
+            {ar:"التَّوَّابُ",tr:"Et-Tevvab",mean:"Tövbeleri kabul eden"},
+            {ar:"الْمُنْتَقِمُ",tr:"El-Müntekim",mean:"Suçluları cezalandıran"},
+            {ar:"الْعَفُوُّ",tr:"El-Afüvv",mean:"Affeden, bağışlayan"},
+            {ar:"الرَّؤُوفُ",tr:"Er-Rauf",mean:"Çok şefkatli"},
+            {ar:"مَالِكُ الْمُلْكِ",tr:"Malikül-Mülk",mean:"Mülkün gerçek sahibi"},
+            {ar:"ذُو الْجَلَالِ وَالْإِكْرَامِ",tr:"Zül-Celali vel-İkram",mean:"Celal ve ikram sahibi"},
+            {ar:"الْمُقْسِطُ",tr:"El-Muksit",mean:"Adaletli davranan"},
+            {ar:"الْجَامِعُ",tr:"El-Cami\'",mean:"Her şeyi toplayan"},
+            {ar:"الْغَنِيُّ",tr:"El-Ganiyy",mean:"Kimseye muhtaç olmayan"},
+            {ar:"الْمُغْنِي",tr:"El-Muğni",mean:"İstediğine zenginlik veren"},
+            {ar:"الْمَانِعُ",tr:"El-Mani\'",mean:"Engelleyen, koruyan"},
+            {ar:"الضَّارُّ",tr:"Ed-Darr",mean:"Zarar verme gücünü elinde tutan"},
+            {ar:"النَّافِعُ",tr:"En-Nafi\'",mean:"Fayda veren"},
+            {ar:"النُّورُ",tr:"En-Nur",mean:"Aydınlatan, nurlandıran"},
+            {ar:"الْهَادِي",tr:"El-Hadi",mean:"Hidayet veren"},
+            {ar:"الْبَدِيعُ",tr:"El-Bedi\'",mean:"Eşsiz yaratan"},
+            {ar:"الْبَاقِي",tr:"El-Baki",mean:"Varlığı sonsuz olan"},
+            {ar:"الْوَارِثُ",tr:"El-Varis",mean:"Her şeyin asıl sahibi"},
+            {ar:"الرَّشِيدُ",tr:"Er-Reşid",mean:"Doğru yola ileten"},
+            {ar:"الصَّبُورُ",tr:"Es-Sabur",mean:"Çok sabırlı olan"}
+        ];
+        const panel = document.getElementById('esmaPanel');
+        if (!panel) return;
+        const content = document.getElementById('esmaContent');
+        if (!content || content.dataset.loaded) return;
+        content.dataset.loaded = '1';
+        let current = 0;
+        const cards = esma.map((e,i) => `
+            <div class="esma-card" onclick="this.classList.toggle('esma-flipped')" title="Tıkla - anlam göster">
+                <div class="esma-front">
+                    <div class="esma-num">${i+1}</div>
+                    <div class="esma-arabic">${e.ar}</div>
+                    <div class="esma-name">${e.tr}</div>
+                </div>
+                <div class="esma-back">
+                    <div class="esma-meaning">${e.mean}</div>
+                </div>
+            </div>`).join('');
+        content.innerHTML = `
+            <div style="font-family:sans-serif;color:#94a3b8;font-size:0.75rem;text-align:center;margin-bottom:12px;direction:ltr">
+                Tıklayarak anlamını gör • 99 isim
+            </div>
+            <div class="esma-grid">${cards}</div>`;
+    }
+
+    // ============================================================
+    // 🏆 LİDERLİK TABLOSU
+    // ============================================================
+    async _initLeaderboard() {
+        const panel = document.getElementById('leaderboardPanel');
+        if (!panel) return;
+        const content = document.getElementById('leaderboardContent');
+        if (!content) return;
+        content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
+        try {
+            if (!window.FirebaseAuth) throw new Error('Firebase yok');
+            const { db, collection, getDocs, query, orderBy, limit } = window.FirebaseAuth;
+            const q = query(collection(db, 'stats'), orderBy('ayahCount', 'desc'), limit(20));
+            const snap = await getDocs(q);
+            const rows = [];
+            let rank = 1;
+            snap.forEach(doc => {
+                const d = doc.data();
+                const name = d.displayName || d.email?.split('@')[0] || 'Anonim';
+                const medals = ['🥇','🥈','🥉'];
+                const medal = medals[rank-1] || `${rank}.`;
+                rows.push(`
+                    <div class="lb-row ${rank<=3?'lb-top':''}">
+                        <span class="lb-rank">${medal}</span>
+                        <span class="lb-name">${name}</span>
+                        <span class="lb-score">${(d.ayahCount||0).toLocaleString()} ayet</span>
+                        <span class="lb-surahs">${(d.surahsOpened||[]).length}/114 sure</span>
+                    </div>`);
+                rank++;
+            });
+            content.innerHTML = rows.length
+                ? `<div class="lb-list">${rows.join('')}</div>`
+                : '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">Henüz kayıt yok.</div>';
+        } catch(e) {
+            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;font-size:0.85rem;padding:10px">Liderlik tablosu yüklenemedi.</div>';
+        }
+    }
+
+    // ============================================================
+    // 👥 HATİM GRUBU
+    // ============================================================
+    async _initHatimGroup() {
+        const panel = document.getElementById('hatimPanel');
+        if (!panel) return;
+        const content = document.getElementById('hatimContent');
+        if (!content) return;
+        if (!window.FirebaseAuth || !this.state.currentUser) {
+            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:10px">Hatim grubu için giriş yapmanız gerekiyor.</div>';
+            return;
+        }
+        const { db, collection, getDocs, doc, setDoc, getDoc, query } = window.FirebaseAuth;
+        // Mevcut hatim gruplarını çek
+        content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
+        try {
+            const snap = await getDocs(collection(db, 'hatimGroups'));
+            let html = `<div style="font-family:sans-serif;direction:ltr">
+                <div style="display:flex;gap:8px;margin-bottom:14px">
+                    <input id="hatimGroupName" placeholder="Grup adı..." style="flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:0.85rem"/>
+                    <button onclick="App._createHatimGroup()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:0.85rem;font-weight:bold">+ Oluştur</button>
+                </div>
+                <div id="hatimGroupList">`;
+            if (snap.empty) {
+                html += '<div style="color:#64748b;text-align:center;padding:16px">Henüz grup yok. İlk grubu oluştur!</div>';
+            } else {
+                snap.forEach(d => {
+                    const g = d.data();
+                    const prog = Math.round(((g.completedJuz||0)/30)*100);
+                    html += `
+                        <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #334155">
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <span style="color:#e2e8f0;font-weight:bold">${g.name||'Grup'}</span>
+                                <span style="color:#94a3b8;font-size:0.78rem">${(g.members||[]).length} üye</span>
+                            </div>
+                            <div style="margin:8px 0">
+                                <div style="background:#0f172a;border-radius:4px;height:8px;overflow:hidden">
+                                    <div style="background:#d4af37;height:100%;width:${prog}%;transition:width 0.5s"></div>
+                                </div>
+                                <div style="color:#94a3b8;font-size:0.72rem;margin-top:3px">${g.completedJuz||0}/30 Cüz tamamlandı (%${prog})</div>
+                            </div>
+                            <button onclick="App._joinHatimGroup('${d.id}')" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.78rem">Katıl</button>
+                        </div>`;
+                });
+            }
+            html += '</div></div>';
+            content.innerHTML = html;
+        } catch(e) {
+            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:10px">Hatim grubu yüklenemedi.</div>';
+        }
+    }
+
+    async _createHatimGroup() {
+        const name = document.getElementById('hatimGroupName')?.value?.trim();
+        if (!name) return;
+        if (!window.FirebaseAuth) return;
+        const { db, collection, addDoc } = window.FirebaseAuth;
+        await addDoc(collection(db, 'hatimGroups'), {
+            name, members: [this.state.currentUser.uid],
+            completedJuz: 0, createdAt: Date.now(),
+            createdBy: this.state.currentUser.uid
+        });
+        this._showToast('✅ Hatim grubu oluşturuldu!', '#6ee7b7');
+        this._initHatimGroup();
+    }
+
+    async _joinHatimGroup(groupId) {
+        if (!window.FirebaseAuth) return;
+        const { db, doc, updateDoc, arrayUnion } = window.FirebaseAuth;
+        await updateDoc(doc(db, 'hatimGroups', groupId), {
+            members: arrayUnion(this.state.currentUser.uid)
+        });
+        this._showToast('✅ Gruba katıldınız!', '#6ee7b7');
+    }
+
+    // ============================================================
+    // 🔔 HATIRLATICI BİLDİRİMİ
+    // ============================================================
+    async _initNotifications() {
+        const panel = document.getElementById('notifPanel');
+        if (!panel) return;
+        const content = document.getElementById('notifContent');
+        if (!content) return;
+        const saved = JSON.parse(localStorage.getItem('qp_notif') || '{"enabled":false,"time":"07:00","msg":"Günlük Kuran okuma zamani! 📖"}');
+        content.innerHTML = `
+            <div style="font-family:sans-serif;direction:ltr">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <label style="color:#e2e8f0;font-size:0.88rem">Bildirim:</label>
+                    <input type="checkbox" id="notifEnabled" ${saved.enabled?'checked':''} style="width:18px;height:18px;cursor:pointer"/>
+                    <span id="notifStatus" style="color:${saved.enabled?'#6ee7b7':'#64748b'};font-size:0.82rem">${saved.enabled?'Açık':'Kapalı'}</span>
+                </div>
+                <div style="margin-bottom:12px">
+                    <label style="color:#94a3b8;font-size:0.82rem;display:block;margin-bottom:4px">Hatırlatma saati:</label>
+                    <input type="time" id="notifTime" value="${saved.time}" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:0.9rem"/>
+                </div>
+                <div style="margin-bottom:12px">
+                    <label style="color:#94a3b8;font-size:0.82rem;display:block;margin-bottom:4px">Mesaj:</label>
+                    <input type="text" id="notifMsg" value="${saved.msg}" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:0.85rem;box-sizing:border-box"/>
+                </div>
+                <button onclick="App._saveNotification()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-weight:bold;font-size:0.85rem">💾 Kaydet</button>
+                <button onclick="App._testNotification()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:0.85rem;margin-left:8px">🔔 Test</button>
+            </div>`;
+        document.getElementById('notifEnabled').onchange = function() {
+            document.getElementById('notifStatus').textContent = this.checked ? 'Açık' : 'Kapalı';
+            document.getElementById('notifStatus').style.color = this.checked ? '#6ee7b7' : '#64748b';
+        };
+        this._scheduleNotification(saved);
+    }
+
+    _saveNotification() {
+        const data = {
+            enabled: document.getElementById('notifEnabled')?.checked || false,
+            time: document.getElementById('notifTime')?.value || '07:00',
+            msg: document.getElementById('notifMsg')?.value || 'Günlük Kur\'an okuma zamanı! 📖'
+        };
+        localStorage.setItem('qp_notif', JSON.stringify(data));
+        this._scheduleNotification(data);
+        this._showToast('✅ Bildirim ayarları kaydedildi', '#6ee7b7');
+    }
+
+    _testNotification() {
+        if (Notification.permission === 'granted') {
+            new Notification('📖 Kur\'an-ı Kerim', { body: 'Test bildirimi başarılı!', icon: '/favicon.ico' });
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(p => {
+                if (p === 'granted') new Notification('📖 Kur\'an-ı Kerim', { body: 'Bildirimler aktif!', icon: '/favicon.ico' });
+            });
+        } else {
+            this._showToast('❌ Bildirim izni reddedildi', '#f87171');
+        }
+    }
+
+    _scheduleNotification(data) {
+        if (this._notifInterval) clearInterval(this._notifInterval);
+        if (!data.enabled) return;
+        const check = () => {
+            const now = new Date();
+            const [h,m] = data.time.split(':').map(Number);
+            if (now.getHours()===h && now.getMinutes()===m) {
+                const last = localStorage.getItem('qp_notif_last');
+                const today = now.toDateString();
+                if (last !== today) {
+                    localStorage.setItem('qp_notif_last', today);
+                    if (Notification.permission === 'granted') {
+                        new Notification('📖 Kur\'an-ı Kerim', { body: data.msg, icon: '/favicon.ico' });
+                    } else {
+                        Notification.requestPermission().then(p => {
+                            if (p === 'granted') new Notification('📖 Kur\'an-ı Kerim', { body: data.msg, icon: '/favicon.ico' });
+                        });
+                    }
+                }
+            }
+        };
+        this._notifInterval = setInterval(check, 60000);
+        check();
+    }
+
+    // ============================================================
+    // 📚 OKUMA GEÇMİŞİ / KALDIĞIN YERDEN DEVAM
+    // ============================================================
+    _saveReadingPosition(surahId, ayahId) {
+        const pos = { surahId, ayahId, time: Date.now() };
+        localStorage.setItem('qp_lastpos', JSON.stringify(pos));
+        // Geçmişe de ekle
+        const hist = JSON.parse(localStorage.getItem('qp_history') || '[]');
+        hist.unshift(pos);
+        if (hist.length > 50) hist.pop();
+        localStorage.setItem('qp_history', JSON.stringify(hist));
+    }
+
+    _loadLastPosition() {
+        const pos = JSON.parse(localStorage.getItem('qp_lastpos') || 'null');
+        if (!pos) return;
+        const meta = this.state.surahMetadata.find(m=>m.id===pos.surahId);
+        const surahName = meta?.name || `Sure ${pos.surahId}`;
+        const timeStr = new Date(pos.time).toLocaleDateString('tr-TR', {day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+        const bar = document.createElement('div');
+        bar.id = 'resumeBar';
+        bar.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:9995;background:#1e293b;border:1.5px solid #d4af37;color:#e2e8f0;padding:10px 18px;border-radius:16px;font-family:sans-serif;font-size:0.82rem;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;max-width:90vw';
+        bar.innerHTML = `📖 Kaldığın yer: <strong style="color:#d4af37">${surahName} - ${pos.ayahId}. ayet</strong> <span style="color:#64748b">(${timeStr})</span>
+            <button onclick="App._resumeReading()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:4px 12px;cursor:pointer;font-weight:bold;font-size:0.8rem">▶ Devam Et</button>
+            <button onclick="document.getElementById('resumeBar').remove()" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:1rem">✕</button>`;
+        document.body.appendChild(bar);
+        setTimeout(() => bar?.remove(), 15000);
+    }
+
+    async _resumeReading() {
+        const pos = JSON.parse(localStorage.getItem('qp_lastpos') || 'null');
+        if (!pos) return;
+        document.getElementById('resumeBar')?.remove();
+        const meta = this.state.surahMetadata.find(m=>m.id===pos.surahId);
+        if (meta) {
+            this.dom.surahInp.value = meta.name;
+            await this._loadSurah(pos.surahId);
+            setTimeout(() => {
+                const el = document.getElementById(`ayah-unit-v15-${pos.ayahId}`);
+                if (el) el.scrollIntoView({behavior:'smooth',block:'center'});
+            }, 800);
+        }
+    }
+
+    // ============================================================
+    // 🌙 OTOMATİK TEMA (GÜNE GÖRE)
+    // ============================================================
+    _initAutoTheme() {
+        // Kullanıcı daha önce manuel tema seçtiyse dokunma
+        const manual = localStorage.getItem('portal_theme');
+        if (manual) return;
+        // Hiç seçilmemişse gün saatine göre uygula
+        const h = new Date().getHours();
+        const isDay = h >= 6 && h < 19;
+        document.body.classList.toggle('light', isDay);
+        this.state.theme = isDay ? 'light' : 'dark';
+        // Her saat başı kontrol et
+        setInterval(() => {
+            if (localStorage.getItem('portal_theme')) return;
+            const hr = new Date().getHours();
+            const day = hr >= 6 && hr < 19;
+            document.body.classList.toggle('light', day);
+        }, 3600000);
+    }
+
+    // ============================================================
+    // 🎊 KUTLAMA ANİMASYONU
+    // ============================================================
+    _showCelebration(msg = '🎉 Tebrikler!') {
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;';
+        el.innerHTML = `
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid #d4af37;border-radius:24px;padding:32px 48px;text-align:center;animation:celebPop 0.4s cubic-bezier(.175,.885,.32,1.275);box-shadow:0 20px 60px rgba(0,0,0,0.8)">
+                <div style="font-size:3rem;margin-bottom:8px">🏆</div>
+                <div style="color:#d4af37;font-size:1.4rem;font-family:sans-serif;font-weight:bold">${msg}</div>
+            </div>
+            <style>@keyframes celebPop{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}</style>`;
+        document.body.appendChild(el);
+        // Konfeti efekti
+        this._spawnConfetti();
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    _spawnConfetti() {
+        const colors = ['#d4af37','#38bdf8','#6ee7b7','#f87171','#a78bfa'];
+        for (let i = 0; i < 60; i++) {
+            const p = document.createElement('div');
+            const color = colors[Math.floor(Math.random()*colors.length)];
+            const x = Math.random()*100, size = 6+Math.random()*8;
+            p.style.cssText = `position:fixed;top:-10px;left:${x}vw;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random()>0.5?'50%':'2px'};z-index:99998;animation:confettiFall ${1.5+Math.random()*2}s ease-in forwards;animation-delay:${Math.random()*0.8}s;pointer-events:none`;
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 4000);
+        }
+        if (!document.getElementById('confettiStyle')) {
+            const s = document.createElement('style');
+            s.id = 'confettiStyle';
+            s.textContent = '@keyframes confettiFall{to{top:105vh;transform:rotate(720deg) translateX(50px);opacity:0}}';
+            document.head.appendChild(s);
+        }
+    }
+
     _createBismillahModule(surahId) {
         const div = this._createElement('div', 'bismillah-v15', 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ');
+        const isDark = !document.body.classList.contains('light');
+        const baseColor = isDark ? '#2c1500' : '#2c1500';
+        div.style.cssText = `color:${baseColor};opacity:1;font-size:3.2rem;text-align:center;margin:30px 0 50px 0;font-family:"Amiri Quran",serif;cursor:pointer;transition:color 0.3s ease;direction:rtl;display:block;width:100%;`;
         div.onclick = () => this.playAyah(surahId, 0);
+        div.onmouseenter = () => { div.style.color = '#d4af37'; };
+        div.onmouseleave = () => { div.style.color = baseColor; };
         return div;
     }
 
     _createOrnamentModule(n) {
         return this._createElement('span', 'ayah-ornament-v15', ` ﴿${this._toArabicDigits(n)}﴾ `);
+    }
+
+    // ============================================================
+    // 📲 PWA INSTALL
+    // ============================================================
+    _initPWAInstall() {
+        const btn = document.getElementById('pwaInstallBtn');
+        if (!btn) return;
+
+        // Store deferred prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this._deferredInstallPrompt = e;
+            btn.style.display = 'block';
+        });
+
+        btn.onclick = async () => {
+            if (!this._deferredInstallPrompt) {
+                this._showToast('📲 Uygulama zaten kurulu veya tarayıcı desteklemiyor', '#94a3b8');
+                return;
+            }
+            this._deferredInstallPrompt.prompt();
+            const { outcome } = await this._deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                btn.style.display = 'none';
+                this._showToast('✅ Uygulama ana ekrana eklendi!', '#6ee7b7');
+            }
+            this._deferredInstallPrompt = null;
+        };
+
+        window.addEventListener('appinstalled', () => {
+            btn.style.display = 'none';
+            this._deferredInstallPrompt = null;
+        });
+    }
+
+    // ============================================================
+    // 🔇 ÇEVRİMDIŞI ALGILAMA
+    // ============================================================
+    _initOfflineDetection() {
+        const update = () => {
+            const isOnline = navigator.onLine;
+            const existing = document.getElementById('offlineBar');
+            if (!isOnline) {
+                if (!existing) {
+                    const bar = document.createElement('div');
+                    bar.id = 'offlineBar';
+                    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#7f1d1d;color:#fca5a5;text-align:center;padding:6px;font-family:sans-serif;font-size:0.82rem;font-weight:bold';
+                    bar.textContent = '🔇 Çevrimdışı Mod — İnternet bağlantısı yok';
+                    document.body.prepend(bar);
+                }
+            } else {
+                if (existing) existing.remove();
+            }
+        };
+        window.addEventListener('online', update);
+        window.addEventListener('offline', update);
+        update();
+    }
+
+    // ============================================================
+    // 🔇 ÇEVRİMDIŞI PANEL
+    // ============================================================
+    _initOfflinePanel() {
+        const content = document.getElementById('offlineContent');
+        if (!content) return;
+
+        const isOnline = navigator.onLine;
+        const cachedSurahs = this.state.surahCache.size;
+        const totalSurahs = 114;
+        const pct = Math.round((cachedSurahs / totalSurahs) * 100);
+
+        content.innerHTML = `
+            <div style="font-family:sans-serif;direction:ltr">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;background:${isOnline?'#064e3b':'#7f1d1d'};border-radius:10px;padding:10px 14px">
+                    <span style="font-size:1.4rem">${isOnline ? '🟢' : '🔴'}</span>
+                    <div>
+                        <div style="color:${isOnline?'#6ee7b7':'#fca5a5'};font-weight:bold;font-size:0.9rem">${isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}</div>
+                        <div style="color:#94a3b8;font-size:0.78rem">${isOnline ? 'İnternet bağlantısı aktif' : 'İnternet bağlantısı yok'}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:0.82rem;margin-bottom:6px">
+                        <span>📦 Önbellekteki Sureler</span>
+                        <span style="color:#d4af37">${cachedSurahs} / ${totalSurahs} (${pct}%)</span>
+                    </div>
+                    <div style="background:#1e293b;border-radius:6px;height:8px;overflow:hidden">
+                        <div style="height:100%;background:linear-gradient(90deg,#d4af37,#f59e0b);width:${pct}%;transition:width 0.6s"></div>
+                    </div>
+                </div>
+
+                <div style="color:#94a3b8;font-size:0.82rem;margin-bottom:14px;line-height:1.5">
+                    Açılan sureler otomatik olarak önbelleğe alınır. Çevrimdışı kullanım için tüm sureleri önceden indirebilirsiniz.
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <button id="downloadAllSurahsBtn" style="background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;border:none;border-radius:10px;padding:10px 16px;font-weight:bold;font-size:0.88rem;cursor:pointer">
+                        ⬇️ Tüm Sureleri İndir (${totalSurahs - cachedSurahs} kaldı)
+                    </button>
+                    <button id="clearCacheBtn" style="background:#1e293b;color:#f87171;border:1px solid #334155;border-radius:10px;padding:10px 16px;font-size:0.88rem;cursor:pointer">
+                        🗑️ Önbelleği Temizle
+                    </button>
+                </div>
+                <div id="offlineDownloadStatus" style="color:#94a3b8;font-size:0.8rem;margin-top:10px;text-align:center"></div>
+            </div>`;
+
+        document.getElementById('downloadAllSurahsBtn').onclick = () => this._downloadAllSurahs();
+        document.getElementById('clearCacheBtn').onclick = () => {
+            this.state.surahCache.clear();
+            this._initOfflinePanel();
+            this._showToast('🗑️ Önbellek temizlendi', '#f87171');
+        };
+    }
+
+    async _downloadAllSurahs() {
+        const btn = document.getElementById('downloadAllSurahsBtn');
+        const status = document.getElementById('offlineDownloadStatus');
+        if (!btn || !status) return;
+        btn.disabled = true;
+        btn.textContent = '⏳ İndiriliyor...';
+        let downloaded = 0, failed = 0;
+        for (let i = 1; i <= 114; i++) {
+            try {
+                if (!this.state.surahCache.has(i)) {
+                    await this._fetchSurahWithCache(i);
+                    downloaded++;
+                }
+                status.textContent = `İlerleme: ${i}/114 sure işlendi`;
+            } catch(e) { failed++; }
+        }
+        btn.disabled = false;
+        const total = this.state.surahCache.size;
+        btn.textContent = `✅ ${total}/114 sure önbellekte`;
+        status.textContent = failed > 0 ? `⚠️ ${failed} sure indirilemedi` : '✅ Tüm sureler indirildi!';
+        setTimeout(() => this._initOfflinePanel(), 1500);
     }
 }
 
