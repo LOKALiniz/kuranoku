@@ -307,6 +307,10 @@ class QuranPortal {
         this.state.bootTime = performance.now();
         this._logBranding();
 
+        // tefsir.json lokal yükle
+        this.tefsirData = {};
+        try { const r = await fetch('tefsir.json'); if (r.ok) this.tefsirData = await r.json(); } catch(e) {}
+
         try {
             this._initializeSelectors();
             this._injectSupremeStyles();
@@ -500,15 +504,28 @@ class QuranPortal {
         if (this.dom.bookmarkBtn) this.dom.bookmarkBtn.onclick = () => { this._togglePanel('bookmarkPanel'); if (!document.getElementById('bookmarkPanel').classList.contains('hidden')) this._renderBookmarks(); };
         if (this.dom.searchVerseBtn) this.dom.searchVerseBtn.onclick = () => { this._togglePanel('searchVersePanel'); setTimeout(()=>{ const i=document.getElementById('verseSearchInput'); if(i)i.focus(); },100); };
         if (this.dom.badgeBtn) this.dom.badgeBtn.onclick = () => { this._togglePanel('badgePanel'); if (!document.getElementById('badgePanel').classList.contains('hidden')) this._renderBadges(); };
-        if (this.dom.calendarBtn) this.dom.calendarBtn.onclick = () => { this._togglePanel('calendarPanel'); if (!document.getElementById('calendarPanel').classList.contains('hidden')) this._renderCalendar(); };
+        if (this.dom.calendarBtn) this.dom.calendarBtn.onclick = () => { this._openModal('calendarOverlay'); this._calYear = null; this._renderCalendar(); };
         if (this.dom.shareBtn) this.dom.shareBtn.onclick = () => { this._togglePanel('sharePanel'); if (!document.getElementById('sharePanel').classList.contains('hidden')) this._initSharePanel(); };
         // Yeni paneller
-        if (this.dom.tefsirBtn) this.dom.tefsirBtn.onclick = () => { this._togglePanel('tefsirPanel'); if (!document.getElementById('tefsirPanel').classList.contains('hidden')) this._initTefsirPanel(this.state.currentSurahId, this.state.currentAyahId||1); };
-        if (this.dom.esmaBtn) this.dom.esmaBtn.onclick = () => { this._togglePanel('esmaPanel'); if (!document.getElementById('esmaPanel').classList.contains('hidden')) this._initEsmaPanel(); };
-        if (this.dom.leaderboardBtn) this.dom.leaderboardBtn.onclick = () => { this._togglePanel('leaderboardPanel'); if (!document.getElementById('leaderboardPanel').classList.contains('hidden')) this._initLeaderboard(); };
-        if (this.dom.hatimBtn) this.dom.hatimBtn.onclick = () => { this._togglePanel('hatimPanel'); if (!document.getElementById('hatimPanel').classList.contains('hidden')) this._initHatimGroup(); };
-        if (this.dom.notifBtn) this.dom.notifBtn.onclick = () => { this._togglePanel('notifPanel'); if (!document.getElementById('notifPanel').classList.contains('hidden')) this._initNotifications(); };
-        if (this.dom.offlineBtn) this.dom.offlineBtn.onclick = () => { this._togglePanel('offlinePanel'); if (!document.getElementById('offlinePanel').classList.contains('hidden')) this._initOfflinePanel(); };
+        if (this.dom.tefsirBtn) this.dom.tefsirBtn.onclick = () => {
+            // Bubble menüyü kapat
+            const grid = document.getElementById('bubbleGrid');
+            if (grid) grid.classList.add('hidden');
+            const trigger = document.getElementById('bubbleTrigger');
+            if (trigger) { trigger.classList.remove('open'); trigger.querySelector('.bubble-trigger-icon').textContent = '☰'; }
+            // Meal butonuna bas (göster) sonra scroll et
+            const mealBtn = document.getElementById('showMealButton');
+            if (mealBtn) mealBtn.click();
+            setTimeout(() => {
+                const mealBlock = document.getElementById('inlineMealBlock');
+                if (mealBlock) mealBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
+        };
+        if (this.dom.esmaBtn) this.dom.esmaBtn.onclick = () => { this._openModal('esmaOverlay'); this._initEsmaPanel(); };
+        if (this.dom.leaderboardBtn) this.dom.leaderboardBtn.onclick = () => { this._openModal('leaderboardOverlay'); this._initLeaderboard(); };
+        if (this.dom.hatimBtn) this.dom.hatimBtn.onclick = () => { this._openModal('hatimOverlay'); this._initHatimGroup(); };
+        if (this.dom.notifBtn) this.dom.notifBtn.onclick = () => { this._openModal('notifOverlay'); this._initNotifications(); };
+        if (this.dom.offlineBtn) this.dom.offlineBtn.onclick = () => { this._openModal('offlineOverlay'); this._initOfflinePanel(); };
         // Bubble page 2 extra butonlar
         const adminBtn2 = document.getElementById('bubbleAdminBtn');
         if (adminBtn2) adminBtn2.onclick = () => { document.getElementById('adminPanelOverlay')?.classList.remove('hidden'); setTimeout(close,80); };
@@ -519,7 +536,7 @@ class QuranPortal {
     }
 
     _togglePanel(panelId) {
-        ['hifzPanel','statsPanel','zikrPanel','gamesPanel','prayerPanel','duaPanel','bookmarkPanel','searchVersePanel','badgePanel','calendarPanel','sharePanel','tefsirPanel','esmaPanel','leaderboardPanel','hatimPanel','notifPanel','offlinePanel'].forEach(id => {
+        ['hifzPanel','statsPanel','zikrPanel','gamesPanel','prayerPanel','duaPanel','bookmarkPanel','searchVersePanel','badgePanel','sharePanel'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             if (id === panelId) {
@@ -529,6 +546,18 @@ class QuranPortal {
                 el.classList.add('hidden');
             }
         });
+    }
+
+    _openModal(overlayId) {
+        document.querySelectorAll('.qp-modal-overlay').forEach(el => el.classList.add('hidden'));
+        const el = document.getElementById(overlayId);
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.onclick = (e) => { if (e.target === el) this._closeModal(overlayId); };
+    }
+    _closeModal(overlayId) {
+        const el = document.getElementById(overlayId);
+        if (el) el.classList.add('hidden');
     }
 
     _scrollToMeal() {
@@ -799,8 +828,19 @@ class QuranPortal {
             textSpan.style.display = 'block';
             textSpan.textContent = item.text || '';
 
+            // 📜 Tefsir butonu — meal satırı sonuna
+            const tefsirBtn = document.createElement('button');
+            tefsirBtn.className = 'meal-tefsir-btn';
+            tefsirBtn.innerHTML = '📜 Tefsir';
+            tefsirBtn.title = `${item.verse}. Ayet Tefsiri`;
+            tefsirBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._toggleInlineTefsir(row, surahId, item.verse, tefsirBtn);
+            });
+
             row.appendChild(numSpan);
             row.appendChild(textSpan);
+            row.appendChild(tefsirBtn);
             row.onclick = () => this.playAyah(surahId, item.verse);
             list.appendChild(row);
         });
@@ -1521,13 +1561,14 @@ class QuranPortal {
         for (let i = 0; i < ids.length; i += this.config.parallelTasks) {
             const batch = ids.slice(i, i + this.config.parallelTasks);
             await Promise.all(batch.map(id => this._fetchSurahWithCache(id).then(d => {
-                if (d) {
-                    this.state.surahMetadata.push({ id, name: d.name, ayahCount: Object.keys(d.verse).length });
-                    if (this.dom.surahSel) this.dom.surahSel.add(new Option(`${id}. ${d.name}`, id));
-                }
+                if (d) this.state.surahMetadata.push({ id, name: d.name, ayahCount: Object.keys(d.verse).length });
             }).catch(() => {})));
         }
-        this.state.surahMetadata.sort((a,b) => a.id - b.id);
+        this.state.surahMetadata.sort((a, b) => a.id - b.id);
+        if (this.dom.surahSel) {
+            this.dom.surahSel.innerHTML = '';
+            this.state.surahMetadata.forEach(m => this.dom.surahSel.add(new Option(`${m.id}. ${m.name}`, m.id)));
+        }
     }
 
     async _fetchSurahWithCache(id) {
@@ -2293,50 +2334,191 @@ class QuranPortal {
     // ============================================================
     // 📅 DİNİ GÜNLER TAKVİMİ
     // ============================================================
-    _renderCalendar() {
-        const el = document.getElementById('calendarContent');
-        if (!el || el.dataset.loaded) return;
-        el.dataset.loaded = '1';
-        const year = new Date().getFullYear();
-        const events = [
-            { month:1,  day:1,  name:'Yılbaşı',                    icon:'🎊', color:'#64748b' },
-            { month:1,  day:28, name:'Regaip Kandili (yaklaşık)',   icon:'🌙', color:'#6ee7b7' },
-            { month:2,  day:26, name:'Miraç Kandili (yaklaşık)',    icon:'✨', color:'#6ee7b7' },
-            { month:3,  day:14, name:'Berat Kandili (yaklaşık)',    icon:'🕌', color:'#6ee7b7' },
-            { month:3,  day:1,  name:'Ramazan Başlangıcı (yaklaşık)',icon:'🌙',color:'#f59e0b' },
-            { month:3,  day:31, name:'Kadir Gecesi (yaklaşık)',     icon:'⭐', color:'#fcd34d' },
-            { month:4,  day:1,  name:'Ramazan Bayramı 1. Günü',    icon:'🎉', color:'#f59e0b' },
-            { month:4,  day:2,  name:'Ramazan Bayramı 2. Günü',    icon:'🎉', color:'#f59e0b' },
-            { month:4,  day:3,  name:'Ramazan Bayramı 3. Günü',    icon:'🎉', color:'#f59e0b' },
-            { month:4,  day:23, name:'Ulusal Egemenlik ve Çocuk Bayramı', icon:'🏅', color:'#38bdf8' },
-            { month:5,  day:19, name:'Atatürk\'ü Anma, Gençlik Bayramı', icon:'🏅', color:'#38bdf8' },
-            { month:6,  day:5,  name:'Kurban Bayramı 1. Günü (yaklaşık)', icon:'🎊', color:'#f59e0b' },
-            { month:6,  day:7,  name:'Kurban Bayramı 3. Günü',     icon:'🎊', color:'#f59e0b' },
-            { month:9,  day:12, name:'Hz. Muhammed\'in Doğumu (yaklaşık)',icon:'☪️',color:'#6ee7b7' },
-            { month:10, day:29, name:'Cumhuriyet Bayramı',          icon:'🏅', color:'#38bdf8' },
+    // ── İslami Takvim — Gerçek Grid + Diyanet Tarihleri ──────────
+    _getDiniGunler() {
+        // Diyanet İşleri Başkanlığı resmi takvimi (2025 + 2026)
+        return [
+            // ── 2025 ──
+            { date:'2025-01-01', name:'Üç Aylar Başlangıcı (Recep)', icon:'🌙', color:'#6ee7b7', hicri:'1 Recep 1446' },
+            { date:'2025-01-02', name:'Regaip Kandili',               icon:'✨', color:'#a78bfa', hicri:'2 Recep 1446' },
+            { date:'2025-01-26', name:'Miraç Kandili',                icon:'🚀', color:'#a78bfa', hicri:'26 Recep 1446' },
+            { date:'2025-02-13', name:'Berat Kandili',                icon:'📜', color:'#a78bfa', hicri:'14 Şaban 1446' },
+            { date:'2025-03-01', name:'Ramazan Başlangıcı',           icon:'🌙', color:'#f59e0b', hicri:'1 Ramazan 1446' },
+            { date:'2025-03-27', name:'Kadir Gecesi',                 icon:'⭐', color:'#fcd34d', hicri:'27 Ramazan 1446' },
+            { date:'2025-03-30', name:'Ramazan Bayramı 1. Günü',      icon:'🎉', color:'#f59e0b', hicri:'1 Şevval 1446' },
+            { date:'2025-03-31', name:'Ramazan Bayramı 2. Günü',      icon:'🎉', color:'#f59e0b', hicri:'2 Şevval 1446' },
+            { date:'2025-04-01', name:'Ramazan Bayramı 3. Günü',      icon:'🎉', color:'#f59e0b', hicri:'3 Şevval 1446' },
+            { date:'2025-06-04', name:'Kurban Bayramı Arefesi',       icon:'🌅', color:'#fb923c', hicri:'9 Zilhicce 1446' },
+            { date:'2025-06-05', name:'Kurban Bayramı 1. Günü',       icon:'🎊', color:'#f59e0b', hicri:'10 Zilhicce 1446' },
+            { date:'2025-06-06', name:'Kurban Bayramı 2. Günü',       icon:'🎊', color:'#f59e0b', hicri:'11 Zilhicce 1446' },
+            { date:'2025-06-07', name:'Kurban Bayramı 3. Günü',       icon:'🎊', color:'#f59e0b', hicri:'12 Zilhicce 1446' },
+            { date:'2025-06-08', name:'Kurban Bayramı 4. Günü',       icon:'🎊', color:'#f59e0b', hicri:'13 Zilhicce 1446' },
+            { date:'2025-09-04', name:'Mevlid Kandili',               icon:'☪️', color:'#6ee7b7', hicri:'12 Rebiülevvel 1447' },
+            // ── 2026 ──
+            { date:'2026-01-15', name:'Miraç Kandili',                icon:'🚀', color:'#a78bfa', hicri:'26 Recep 1447' },
+            { date:'2026-02-02', name:'Berat Kandili',                icon:'📜', color:'#a78bfa', hicri:'14 Şaban 1447' },
+            { date:'2026-02-19', name:'Ramazan Başlangıcı',           icon:'🌙', color:'#f59e0b', hicri:'1 Ramazan 1447' },
+            { date:'2026-03-16', name:'Kadir Gecesi',                 icon:'⭐', color:'#fcd34d', hicri:'27 Ramazan 1447' },
+            { date:'2026-03-20', name:'Ramazan Bayramı 1. Günü',      icon:'🎉', color:'#f59e0b', hicri:'1 Şevval 1447' },
+            { date:'2026-03-21', name:'Ramazan Bayramı 2. Günü',      icon:'🎉', color:'#f59e0b', hicri:'2 Şevval 1447' },
+            { date:'2026-03-22', name:'Ramazan Bayramı 3. Günü',      icon:'🎉', color:'#f59e0b', hicri:'3 Şevval 1447' },
+            { date:'2026-05-26', name:'Kurban Bayramı Arefesi',       icon:'🌅', color:'#fb923c', hicri:'9 Zilhicce 1447' },
+            { date:'2026-05-27', name:'Kurban Bayramı 1. Günü',       icon:'🎊', color:'#f59e0b', hicri:'10 Zilhicce 1447' },
+            { date:'2026-05-28', name:'Kurban Bayramı 2. Günü',       icon:'🎊', color:'#f59e0b', hicri:'11 Zilhicce 1447' },
+            { date:'2026-05-29', name:'Kurban Bayramı 3. Günü',       icon:'🎊', color:'#f59e0b', hicri:'12 Zilhicce 1447' },
+            { date:'2026-05-30', name:'Kurban Bayramı 4. Günü',       icon:'🎊', color:'#f59e0b', hicri:'13 Zilhicce 1447' },
+            { date:'2026-12-21', name:'Üç Aylar Başlangıcı (Recep)', icon:'🌙', color:'#6ee7b7', hicri:'1 Recep 1448' },
+            { date:'2026-12-25', name:'Regaip Kandili',               icon:'✨', color:'#a78bfa', hicri:'5 Recep 1448' },
         ];
-        const now = new Date();
-        const nowDay = now.getMonth()*100+now.getDate();
-        const sorted = [...events].sort((a,b)=>(a.month*100+a.day)-(b.month*100+b.day));
-        const upcoming = sorted.filter(e=>e.month*100+e.day>=nowDay).slice(0,8);
-        const past = sorted.filter(e=>e.month*100+e.day<nowDay);
-        const render = arr => arr.map(e=>{
-            const d=new Date(year,e.month-1,e.day);
-            const diff=Math.ceil((d-now)/(1000*60*60*24));
-            const diffText=diff===0?'Bugün!':diff>0?`${diff} gün sonra`:`${Math.abs(diff)} gün önce`;
-            return `<div style="background:#1e293b;border:1px solid #334155;border-left:3px solid ${e.color};border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;font-family:sans-serif">
-                <div style="font-size:1.4rem">${e.icon}</div>
-                <div style="flex:1">
-                    <div style="color:#e2e8f0;font-size:0.88rem;font-weight:600">${e.name}</div>
-                    <div style="color:#64748b;font-size:0.75rem">${e.day} ${['','Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'][e.month]} ${year}</div>
+    }
+
+    async _renderCalendar() {
+        const container = document.getElementById('calendarContent');
+        if (!container) return;
+
+        // State init
+        if (!this._calYear) {
+            const now = new Date();
+            this._calYear  = now.getFullYear();
+            this._calMonth = now.getMonth(); // 0-based
+        }
+
+        const events   = this._getDiniGunler();
+        const today    = new Date();
+        today.setHours(0,0,0,0);
+        const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        const DAYS_TR   = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+
+        const y = this._calYear;
+        const m = this._calMonth;
+        const firstDay = new Date(y, m, 1);
+        const lastDay  = new Date(y, m + 1, 0);
+        // Pazartesi başlangıçlı — JS'de 0=Pazar, biz 0=Pzt istiyoruz
+        let startDow = firstDay.getDay(); // 0=Pazar
+        startDow = (startDow + 6) % 7;   // → 0=Pzt
+
+        // Event map: "YYYY-MM-DD" → [events]
+        const evMap = {};
+        events.forEach(e => {
+            if (!evMap[e.date]) evMap[e.date] = [];
+            evMap[e.date].push(e);
+        });
+
+        // Hicri tarihi API'den al
+        let hijriToday = '';
+        try {
+            const r = await fetch(`https://api.aladhan.com/v1/gToH?date=${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}`);
+            if (r.ok) {
+                const j = await r.json();
+                const h = j.data?.hijri;
+                if (h) hijriToday = `${h.day} ${h.month?.en} ${h.year}`;
+            }
+        } catch(e) {}
+
+        // Grid hücreleri
+        let cells = '';
+        // Boş başlangıç hücreleri
+        for (let i = 0; i < startDow; i++) cells += `<div class="qcal-cell qcal-empty"></div>`;
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const cellDate = new Date(y, m, d);
+            const isToday = cellDate.getTime() === today.getTime();
+            const dayEvents = evMap[dateStr] || [];
+            const hasFest = dayEvents.some(e => e.name.includes('Bayram'));
+            const hasKandil = dayEvents.some(e => e.icon === '✨' || e.icon === '🚀' || e.icon === '📜' || e.icon === '⭐' || e.icon === '☪️');
+            const hasMoon  = dayEvents.some(e => e.icon === '🌙');
+            let dotHtml = '';
+            if (dayEvents.length) {
+                const colors = [...new Set(dayEvents.map(e => e.color))].slice(0,3);
+                dotHtml = `<div class="qcal-dots">${colors.map(c=>`<span class="qcal-dot" style="background:${c}"></span>`).join('')}</div>`;
+            }
+            cells += `<div class="qcal-cell${isToday?' qcal-today':''}${hasFest?' qcal-fest':''}${hasKandil?' qcal-kandil':''}${hasMoon?' qcal-moon':''}" data-date="${dateStr}" onclick="App._calDayClick('${dateStr}')">
+                <span class="qcal-num">${d}</span>
+                ${dotHtml}
+            </div>`;
+        }
+
+        // Yaklaşan dini günler listesi
+        const upcoming = events
+            .filter(e => new Date(e.date) >= today)
+            .sort((a,b) => new Date(a.date) - new Date(b.date))
+            .slice(0, 7);
+
+        const upcomingHtml = upcoming.map(e => {
+            const dt = new Date(e.date);
+            const diff = Math.round((dt - today) / 86400000);
+            const diffTxt = diff === 0 ? 'Bugün! 🎉' : diff === 1 ? 'Yarın' : `${diff} gün sonra`;
+            const [ey, em, ed] = e.date.split('-');
+            return `<div class="qcal-ev-row" style="border-left-color:${e.color}">
+                <div class="qcal-ev-icon">${e.icon}</div>
+                <div class="qcal-ev-info">
+                    <div class="qcal-ev-name">${e.name}</div>
+                    <div class="qcal-ev-date">${parseInt(ed)} ${MONTHS_TR[parseInt(em)-1]} ${ey} · ${e.hicri}</div>
                 </div>
-                <div style="color:${e.color};font-size:0.75rem;font-weight:bold;white-space:nowrap">${diffText}</div>
+                <div class="qcal-ev-diff" style="color:${e.color}">${diffTxt}</div>
             </div>`;
         }).join('');
-        el.innerHTML = `
-            <div style="color:#f59e0b;font-size:0.78rem;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:sans-serif">Yaklaşan Günler</div>
-            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${render(upcoming)}</div>
-            ${past.length?`<div style="color:#475569;font-size:0.78rem;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:sans-serif">Geçen Günler</div><div style="display:flex;flex-direction:column;gap:6px;opacity:0.55">${render(past)}</div>`:''}`;
+
+        container.innerHTML = `
+        <div class="qcal-wrap">
+            <!-- Hicri bugün -->
+            ${hijriToday ? `<div class="qcal-hijri-today">🌙 Bugün: ${hijriToday} (Hicri)</div>` : ''}
+
+            <!-- Ay navigasyon -->
+            <div class="qcal-nav">
+                <button class="qcal-nav-btn" onclick="App._calPrev()">‹</button>
+                <span class="qcal-nav-title">${MONTHS_TR[m]} ${y}</span>
+                <button class="qcal-nav-btn" onclick="App._calNext()">›</button>
+            </div>
+
+            <!-- Gün başlıkları -->
+            <div class="qcal-grid">
+                ${DAYS_TR.map(d=>`<div class="qcal-head">${d}</div>`).join('')}
+                ${cells}
+            </div>
+
+            <!-- Seçili gün detay -->
+            <div id="qcalDayDetail" class="qcal-day-detail hidden"></div>
+
+            <!-- Yaklaşan günler -->
+            <div class="qcal-section-title">📅 Yaklaşan Dini Günler</div>
+            <div class="qcal-ev-list">${upcomingHtml || '<div style="color:#64748b;text-align:center;padding:16px">Yaklaşan dini gün bulunamadı</div>'}</div>
+
+            <div class="qcal-source">Kaynak: Diyanet İşleri Başkanlığı Resmi Takvimi</div>
+        </div>`;
+    }
+
+    _calPrev() {
+        this._calMonth--;
+        if (this._calMonth < 0) { this._calMonth = 11; this._calYear--; }
+        this._renderCalendar();
+    }
+    _calNext() {
+        this._calMonth++;
+        if (this._calMonth > 11) { this._calMonth = 0; this._calYear++; }
+        this._renderCalendar();
+    }
+    _calDayClick(dateStr) {
+        const events = this._getDiniGunler().filter(e => e.date === dateStr);
+        const detail = document.getElementById('qcalDayDetail');
+        if (!detail) return;
+        const [y,m,d] = dateStr.split('-');
+        const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        if (!events.length) {
+            detail.classList.add('hidden');
+            return;
+        }
+        detail.classList.remove('hidden');
+        detail.innerHTML = `<div style="font-family:sans-serif">
+            <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:8px">${parseInt(d)} ${MONTHS_TR[parseInt(m)-1]} ${y}</div>
+            ${events.map(e=>`<div style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;border-left:3px solid ${e.color}">
+                <span style="font-size:1.3rem">${e.icon}</span>
+                <div>
+                    <div style="color:#e2e8f0;font-weight:600;font-size:0.9rem">${e.name}</div>
+                    <div style="color:#64748b;font-size:0.72rem">${e.hicri}</div>
+                </div>
+            </div>`).join('')}
+        </div>`;
     }
 
     // ============================================================
@@ -2665,33 +2847,95 @@ class QuranPortal {
     // ============================================================
     // 📖 TEFSİR PANELİ
     // ============================================================
-    async _initTefsirPanel(surahId, ayahId) {
-        const panel = document.getElementById('tefsirPanel');
-        if (!panel) return;
-        panel.classList.remove('hidden');
-        const content = document.getElementById('tefsirContent');
-        if (!content) return;
-        content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Tefsir yükleniyor...</div>';
-        try {
-            const res = await fetch(`https://api.quran.com/api/v4/tafsirs/tr-diyanet-isleri/by_ayah/${surahId}:${ayahId}`);
-            if (!res.ok) throw new Error();
-            const json = await res.json();
-            const text = json.tafsir?.text || '';
-            const clean = text.replace(/<[^>]+>/g,'').trim();
-            const meta = this.state.surahMetadata.find(m=>m.id===surahId);
-            content.innerHTML = `
-                <div style="font-family:sans-serif;direction:ltr">
-                    <div style="color:#d4af37;font-weight:bold;font-size:0.9rem;margin-bottom:10px">
-                        📖 ${meta?.name||'Sure'} Suresi — ${ayahId}. Ayet Tefsiri
-                    </div>
-                    <div style="color:#e2e8f0;font-size:0.88rem;line-height:1.9;border-left:3px solid #d4af37;padding-left:12px">
-                        ${clean||'Bu ayet için tefsir bulunamadı.'}
-                    </div>
-                    <div style="color:#64748b;font-size:0.72rem;margin-top:10px">Kaynak: Diyanet İşleri Tefsiri</div>
-                </div>`;
-        } catch(e) {
-            content.innerHTML = `<div style="color:#f87171;font-family:sans-serif;font-size:0.85rem;padding:10px">❌ Tefsir yüklenemedi. İnternet bağlantınızı kontrol edin.</div>`;
+    // ============================================================
+    // 📖 TEFSİR PANELİ — LOKAL JSON
+    // ============================================================
+    // ============================================================
+    // 📜 INLINE TEFSİR — Meal satırının altında açılır/kapanır
+    // ============================================================
+    _toggleInlineTefsir(row, surahId, ayahId, btn) {
+        // Aynı satırda zaten açık mı?
+        const existing = row.nextElementSibling;
+        if (existing && existing.classList.contains('inline-tefsir-box')) {
+            // Kapat
+            existing.style.maxHeight = '0';
+            existing.style.opacity = '0';
+            setTimeout(() => existing.remove(), 280);
+            btn.innerHTML = '📜 Tefsir';
+            btn.classList.remove('active');
+            return;
         }
+
+        // Başka açık inline tefsir varsa kapat
+        document.querySelectorAll('.inline-tefsir-box').forEach(el => {
+            el.style.maxHeight = '0'; el.style.opacity = '0';
+            setTimeout(() => el.remove(), 280);
+        });
+        document.querySelectorAll('.meal-tefsir-btn.active').forEach(b => {
+            b.innerHTML = '📜 Tefsir'; b.classList.remove('active');
+        });
+
+        const meta = this.state.surahMetadata.find(m => m.id === surahId);
+        const sureName = meta?.name || `Sure ${surahId}`;
+        const lokal = this.tefsirData?.[String(surahId)]?.[String(ayahId)];
+
+        const box = document.createElement('div');
+        box.className = 'inline-tefsir-box';
+        box.innerHTML = lokal
+            ? `<div class="itb-header">📜 ${sureName} — ${ayahId}. Ayet Tefsiri</div>
+               <div class="itb-text">${lokal}</div>
+               <div class="itb-source">📚 Lokal Tefsir Veritabanı</div>`
+            : `<div class="itb-header">📜 ${sureName} — ${ayahId}. Ayet</div>
+               <div class="itb-empty">Bu ayet için henüz tefsir eklenmemiş.<br><span>tefsir.json → Sure ${surahId}, Ayet ${ayahId}</span></div>`;
+
+        // Satırdan sonra ekle
+        row.insertAdjacentElement('afterend', box);
+
+        // Animasyon
+        requestAnimationFrame(() => {
+            box.style.maxHeight = box.scrollHeight + 80 + 'px';
+            box.style.opacity = '1';
+        });
+
+        btn.innerHTML = '📜 Kapat';
+        btn.classList.add('active');
+
+        // Meal bölümüne smooth scroll
+        setTimeout(() => {
+            box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 120);
+    }
+
+    _showTefsirForAyah(surahId, ayahId) {
+        this._openModal('tefsirOverlay');
+        const content = document.getElementById('tefsirContent');
+        const titleEl = document.getElementById('tefsirModalTitle');
+        if (!content) return;
+        const meta = this.state.surahMetadata.find(m => m.id === surahId);
+        const sureName = meta?.name || `Sure ${surahId}`;
+        if (titleEl) titleEl.textContent = `📜 ${sureName} — ${ayahId}. Ayet`;
+        const lokal = this.tefsirData?.[String(surahId)]?.[String(ayahId)];
+        if (lokal) {
+            content.innerHTML = `
+                <div style="margin-bottom:14px;padding:10px 14px;background:rgba(212,175,55,0.08);border-radius:10px;border-left:3px solid #d4af37">
+                    <div style="color:#d4af37;font-weight:bold;font-size:0.85rem">${sureName} Suresi — ${ayahId}. Ayet</div>
+                </div>
+                <div style="color:#e2e8f0;font-size:0.95rem;line-height:2;text-align:justify">${lokal}</div>
+                <div style="color:#475569;font-size:0.7rem;margin-top:16px;padding-top:10px;border-top:1px solid #1e293b">📚 Lokal Tefsir Veritabanı</div>`;
+        } else {
+            content.innerHTML = `
+                <div style="margin-bottom:14px;padding:10px 14px;background:rgba(212,175,55,0.08);border-radius:10px;border-left:3px solid #d4af37">
+                    <div style="color:#d4af37;font-weight:bold;font-size:0.85rem">${sureName} Suresi — ${ayahId}. Ayet</div>
+                </div>
+                <div style="color:#94a3b8;text-align:center;padding:24px;font-size:0.9rem;line-height:1.8">
+                    📋 Bu ayet için henüz tefsir eklenmemiş.<br>
+                    <span style="color:#475569;font-size:0.78rem">tefsir.json → Sure ${surahId}, Ayet ${ayahId}</span>
+                </div>`;
+        }
+    }
+
+    async _initTefsirPanel(surahId, ayahId) {
+        this._showTefsirForAyah(surahId, ayahId);
     }
 
     // ============================================================
