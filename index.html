@@ -478,10 +478,22 @@
     <div id="prayerPanel" class="extra-panel hidden" style="margin:0 auto;max-width:680px;margin-bottom:16px">
       <div class="extra-panel-inner">
         <h3 class="panel-title">🕌 Namaz Vakitleri</h3>
-        <div id="prayerCityRow" style="display:flex;gap:8px;margin-bottom:12px">
-          <input type="text" id="prayerCityInput" placeholder="Şehir (örn: Istanbul)" style="flex:1;background:#1e293b;color:#e2e8f0;border:1.5px solid #334155;border-radius:10px;padding:0.5rem 0.8rem;font-size:0.95rem" />
-          <button id="prayerSearchBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:0.5rem 1rem;font-weight:bold;cursor:pointer">Ara</button>
+
+        <!-- Şehir — görüntü modu -->
+        <div id="prayerCityViewRow" style="display:none;align-items:center;gap:8px;background:#1e293b;border:1.5px solid #334155;border-radius:10px;padding:0.5rem 0.9rem;margin-bottom:10px">
+          <span style="font-size:1rem">📍</span>
+          <span id="prayerCityDisplay" style="flex:1;color:#e2e8f0;font-size:0.95rem;font-family:sans-serif"></span>
+          <button id="prayerCityEditBtn" title="Şehri düzenle" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:#94a3b8;padding:2px 4px;transition:color 0.2s" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#94a3b8'">✏️</button>
         </div>
+
+        <!-- Şehir — düzenleme modu -->
+        <div id="prayerCityRow" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <input type="text" id="prayerCityInput" placeholder="Şehir adı (örn: Mersin)" style="flex:1;min-width:130px;background:#1e293b;color:#e2e8f0;border:1.5px solid #334155;border-radius:10px;padding:0.5rem 0.8rem;font-size:0.9rem" />
+          <button id="prayerLocBtn" title="Konumdan bul" style="background:#0f2233;color:#38bdf8;border:1.5px solid #38bdf860;border-radius:10px;padding:0.5rem 0.9rem;cursor:pointer;font-size:0.85rem;white-space:nowrap">📍 Konum</button>
+          <button id="prayerSearchBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:0.5rem 1rem;font-weight:bold;cursor:pointer;font-size:0.85rem">Ara</button>
+        </div>
+        <div id="prayerCityInput_loc" style="font-family:sans-serif;font-size:0.75rem;color:#94a3b8;margin-top:-6px;margin-bottom:8px;min-height:14px;text-align:center"></div>
+
         <div id="prayerTimes" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
         <div id="prayerNextInfo" style="margin-top:10px;text-align:center;color:#94a3b8;font-size:0.9rem"></div>
       </div>
@@ -560,6 +572,7 @@
             <span class="bubble-dot active" data-page="1"></span>
             <span class="bubble-dot" data-page="2"></span>
             <span class="bubble-dot" data-page="3"></span>
+          <span class="bubble-dot" data-page="4"></span>
           </div>
         </div>
 
@@ -607,6 +620,11 @@
             <button id="bubbleReloadBtn"    class="bubble-btn"><span class="bubble-btn-icon">🔄</span><span class="bubble-btn-label">Yenile</span></button>
           </div>
 
+          <!-- Sayfa 4: AI -->
+          <div class="bubble-page" id="bubblePage4">
+            <button id="quranAiBtn" class="bubble-btn"><span class="bubble-btn-icon">🤖</span><span class="bubble-btn-label">AI Sohbet</span></button>
+          </div>
+
         </div><!-- /bubble-pages-track -->
         </div><!-- /bubble-pages-wrapper -->
 
@@ -623,6 +641,7 @@
   <div id="offlineOverlay"     class="qp-modal-overlay hidden"><div class="qp-modal-box"><div class="qp-modal-header"><span class="qp-modal-title">🔇 Çevrimdışı Mod</span><button class="qp-modal-close" onclick="App._closeModal('offlineOverlay')">✕</button></div><div class="qp-modal-body" id="offlineContent"></div></div></div>
   <div id="calendarOverlay"    class="qp-modal-overlay hidden"><div class="qp-modal-box qp-modal-wide"><div class="qp-modal-header"><span class="qp-modal-title">📅 İslami Takvim</span><button class="qp-modal-close" onclick="App._closeModal('calendarOverlay')">✕</button></div><div class="qp-modal-body" id="calendarContent"></div></div></div>
 
+  <div id="quranAiOverlay" class="qp-modal-overlay hidden"><div class="qp-modal-box qp-modal-wide" style="max-height:90vh;display:flex;flex-direction:column"><div class="qp-modal-header"><span class="qp-modal-title">🤖 Kur'an AI Sohbet</span><button class="qp-modal-close" onclick="App._closeModal('quranAiOverlay')">✕</button></div><div class="qp-modal-body" id="quranAiContent" style="flex:1;overflow:hidden;padding:0"></div></div></div>
   <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
   <script src="admin.js"></script>
