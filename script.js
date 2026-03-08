@@ -1,7 +1,3 @@
-/**
- * 🕋 QURAN PORTAL OS v18.0 - FIREBASE EDITION
- * Firebase Auth + Firestore + Kelime Tooltip + Meal Düzeltmesi
- */
 
 class QuranPortal {
     constructor() {
@@ -408,6 +404,7 @@ class QuranPortal {
             hatimBtn: document.getElementById('hatimButton'),
             hatimPanel: document.getElementById('hatimPanel'),
             notifBtn: document.getElementById('notifButton'),
+            quranAiBtn: document.getElementById('quranAiBtn'),
             offlineBtn: document.getElementById('offlineButton'),
             notifPanel: document.getElementById('notifPanel'),
             fontSlider: document.getElementById('fontSizeSlider'),
@@ -526,6 +523,7 @@ class QuranPortal {
         if (this.dom.hatimBtn) this.dom.hatimBtn.onclick = () => { this._openModal('hatimOverlay'); this._initHatimGroup(); };
         if (this.dom.notifBtn) this.dom.notifBtn.onclick = () => { this._openModal('notifOverlay'); this._initNotifications(); };
         if (this.dom.offlineBtn) this.dom.offlineBtn.onclick = () => { this._openModal('offlineOverlay'); this._initOfflinePanel(); };
+        if (this.dom.quranAiBtn) this.dom.quranAiBtn.onclick = () => { this._openModal('quranAiOverlay'); this._initQuranChat(); };
         // Bubble page 2 extra butonlar
         const adminBtn2 = document.getElementById('bubbleAdminBtn');
         if (adminBtn2) adminBtn2.onclick = () => { document.getElementById('adminPanelOverlay')?.classList.remove('hidden'); setTimeout(close,80); };
@@ -1284,6 +1282,8 @@ class QuranPortal {
     }
 
     _showGamesMenu() {
+        // Aktif oyun bitmeden menüye dönünce puanı kaydet
+        this._tryRecordGameScore();
         document.getElementById('gamesMenu').classList.remove('hidden');
         ['quizArea','matchArea','countArea','hangmanArea','memoryArea','orderArea','surahOrderArea','speedQuizArea','wordCompleteArea','trueFalseArea','surahFirstArea'].forEach(id => {
             const el = document.getElementById(id);
@@ -1293,10 +1293,64 @@ class QuranPortal {
         if (this._tfTimer) { clearInterval(this._tfTimer); this._tfTimer = null; }
     }
 
+    // Oyun puanı hesapla ve Firebase'e yaz
+    _tryRecordGameScore() {
+        // Hangi oyun aktifti, skoru oku
+        const games = [
+            { key: 'quiz',        label: 'Sure Bilgi Yarışması',  mult: 10 },
+            { key: 'match',       label: 'Ayet-Meal Eşleştir',    mult: 12 },
+            { key: 'countGame',   label: 'Kaç Ayet Var?',         mult: 8  },
+            { key: 'orderGame',   label: 'Ayet Sırala',           mult: 15 },
+            { key: 'surahOrderGame', label: 'Sure Sırası',        mult: 10 },
+            { key: 'speedQuiz',   label: 'Hızlı Bilgi',           mult: 18 },
+            { key: 'wcGame',      label: 'Kelime Tamamla',        mult: 12 },
+            { key: 'tfGame',      label: 'Doğru/Yanlış',          mult: 8  },
+            { key: 'sfGame',      label: 'İlk Ayet Kim?',         mult: 10 },
+        ];
+        let bestGame = null, bestPts = 0;
+        games.forEach(g => {
+            const obj = this[g.key];
+            if (!obj || !obj.total || obj.total < 3) return; // min 3 soru
+            if (obj._recorded) return; // zaten kaydedildi
+            const acc  = obj.score / obj.total;
+            const pts  = Math.round(obj.score * g.mult * (1 + acc)); // doğruluk bonusu
+            if (pts > bestPts) { bestPts = pts; bestGame = { ...g, pts, score: obj.score, total: obj.total }; }
+            obj._recorded = true;
+        });
+        if (!bestGame || bestPts < 1) return;
+        this._saveGameScore(bestGame.pts, bestGame.label, bestGame.score, bestGame.total);
+    }
+
+    async _saveGameScore(pts, gameName, score, total) {
+        // Toast göster
+        this._showToast(`🎮 ${gameName}: +${pts} puan! (${score}/${total})`, '#d4af37');
+        if (!window.FirebaseAuth || !this.state.currentUser) return;
+        try {
+            const { db, doc, getDoc, setDoc } = window.FirebaseAuth;
+            const uid = this.state.currentUser.uid;
+            const ref = doc(db, 'gameScores', uid);
+            const snap = await getDoc(ref);
+            const existing = snap.exists() ? snap.data() : {};
+            const newTotal  = (existing.totalPoints || 0) + pts;
+            const gamesPlayed = (existing.gamesPlayed || 0) + 1;
+            const history = existing.history || [];
+            history.unshift({ pts, gameName, score, total, ts: Date.now() });
+            if (history.length > 20) history.pop();
+            await setDoc(ref, {
+                totalPoints: newTotal,
+                gamesPlayed,
+                history,
+                displayName: this.state.currentUser.displayName || this.state.currentUser.email?.split('@')[0] || 'Anonim',
+                uid,
+                updatedAt: Date.now()
+            });
+        } catch(e) { console.warn('Oyun puanı kaydedilemedi:', e); }
+    }
+
     // ─── Oyun 3: Kaç Ayet Var? ───────────────────────────────
     _startCountGame() {
         if (this.state.surahMetadata.length < 4) return;
-        this.countGame = { score:0, total:0 };
+        this.countGame = { score:0, total:0, _recorded:false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('countArea').classList.remove('hidden');
         document.getElementById('countNextBtn').classList.add('hidden');
@@ -1328,6 +1382,7 @@ class QuranPortal {
                 else { btn.classList.add('wrong'); div.querySelectorAll('button').forEach(b=>{ if(parseInt(b.textContent)===correct.ayahCount) b.classList.add('correct'); }); document.getElementById('countFeedback').textContent=`❌ Doğrusu: ${correct.ayahCount}`; }
                 this.countGame.total++;
                 document.getElementById('countScore').textContent=`${this.countGame.score}/${this.countGame.total}`;
+                if (this.countGame.total % 10 === 0) { this.countGame._recorded=false; this._tryRecordGameScore(); }
                 document.getElementById('countNextBtn').classList.remove('hidden');
             };
             div.appendChild(btn);
@@ -1432,7 +1487,7 @@ class QuranPortal {
 
     _startQuiz() {
         if (this.state.surahMetadata.length < 4) return;
-        this.quiz = { score: 0, total: 0 };
+        this.quiz = { score: 0, total: 0, _recorded: false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('quizArea').classList.remove('hidden');
         document.getElementById('quizNextBtn').classList.add('hidden');
@@ -1460,6 +1515,7 @@ class QuranPortal {
                 else { btn.classList.add('wrong'); document.querySelectorAll('.quiz-opt-btn').forEach(b => { if (b.textContent === correct.name) b.classList.add('correct'); }); document.getElementById('quizFeedback').innerHTML = `❌ Doğrusu: <strong>${correct.name}</strong>`; }
                 this.quiz.total++;
                 document.getElementById('quizScore').textContent = `Skor: ${this.quiz.score} / ${this.quiz.total}`;
+                if (this.quiz.total % 10 === 0) { this.quiz._recorded=false; this._tryRecordGameScore(); }
                 document.getElementById('quizNextBtn').classList.remove('hidden');
             };
             optDiv.appendChild(btn);
@@ -1469,7 +1525,7 @@ class QuranPortal {
 
     _startMatch() {
         if (!this.state.mealCache) { alert('Meal veritabanı henüz yüklenmedi.'); return; }
-        this.match = { score: 0, total: 0 };
+        this.match = { score: 0, total: 0, _recorded: false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('matchArea').classList.remove('hidden');
         document.getElementById('matchNextBtn').classList.add('hidden');
@@ -1506,6 +1562,7 @@ class QuranPortal {
                 else { btn.classList.add('wrong'); document.getElementById('matchFeedback').innerHTML = `❌ Yanlış!`; }
                 this.match.total++;
                 document.getElementById('matchScore').textContent = `Skor: ${this.match.score} / ${this.match.total}`;
+                if (this.match.total % 10 === 0) { this.match._recorded=false; this._tryRecordGameScore(); }
                 document.getElementById('matchNextBtn').classList.remove('hidden');
             };
             optDiv.appendChild(btn);
@@ -1520,36 +1577,128 @@ class QuranPortal {
     async _renderDailyVerse() {
         const box = document.getElementById('dailyVerseBox');
         if (!box) return;
+
+        // Düzgün hash — her gün tamamen farklı sure+ayet
         const today = new Date();
-        const seed = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
+        const rawSeed = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
+        let h = rawSeed ^ 0xDEADBEEF;
+        h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+        h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+        h = Math.abs(h ^ (h >>> 16));
+
         const counts = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,14,10,77,18,12,31,40,15,6,29,51,49,30,52,16,23,54,41,44,37,0,25,78,43,38,35,28,25,27,20,17,13,14,11,15,9,14,14,6,6,5,8,8,3,7,6,11,11];
         const total = counts.reduce((a,b) => a+b, 0);
-        const ayahIndex = seed % total;
+        const ayahIndex = h % total;
         let cumulative = 0, targetSurah = 1, targetAyah = 1;
         for (let i = 0; i < counts.length; i++) {
             if (ayahIndex < cumulative + counts[i]) { targetSurah = i + 1; targetAyah = ayahIndex - cumulative + 1; break; }
             cumulative += counts[i];
         }
+
         try {
             const data = await this._fetchSurahWithCache(targetSurah);
             if (!data) return;
             const arabic = data.verse?.[`verse_${targetAyah}`] || '';
-            // mealCache bekle — yüklenmemişse tekrar dene
-            if (!this.state.mealCache) {
-                await this._loadMealDatabase();
-            }
-            const meal = this.state.mealCache?.[targetSurah] ?
-                (this.state.mealCache[targetSurah].find(v => v.verse === targetAyah)?.text || '') : '';
-            const arabicEl = document.getElementById('dailyVerseArabic');
-            const mealEl   = document.getElementById('dailyVerseMeal');
-            const refEl    = document.getElementById('dailyVerseRef');
-            if (arabicEl) arabicEl.textContent = arabic;
-            if (mealEl)   mealEl.textContent   = meal || '(meal yüklenemedi)';
-            if (refEl)    refEl.textContent     = `${data.name} Suresi — ${targetAyah}. Ayet`;
+            if (!this.state.mealCache) await this._loadMealDatabase();
+            const meal = this.state.mealCache?.[targetSurah]?.find(v => v.verse === targetAyah)?.text || '';
+
+            // AI yorumu önbellekten kontrol
+            const cacheKey = `qp_dv_ai_${rawSeed}`;
+            const cachedAI = localStorage.getItem(cacheKey);
+
+            // HTML'i yeni yapıya göre render et
+            box.innerHTML = `
+                <div class="dv-badge">🌟 Günün Ayeti</div>
+                <div class="dv-arabic-text">${arabic}</div>
+                <div class="dv-meal-text">${meal}</div>
+                <div class="dv-ref-text">📖 ${data.name} Suresi &mdash; ${targetAyah}. Ayet</div>
+                <div class="dv-ai-block">
+                    <div class="dv-ai-label">✨ Nur-AI Yorumu</div>
+                    <div class="dv-ai-body" id="dvAiBody">${
+                        cachedAI
+                        ? cachedAI
+                        : '<span class="dv-thinking"><span></span><span></span><span></span></span>'
+                    }</div>
+                </div>
+                <button class="dv-share-btn" onclick="App._shareDailyVerse('${data.name}',${targetAyah})">📤 Paylaş</button>`;
             box.style.display = '';
+
+            if (!cachedAI) this._fetchDailyVerseAI(meal, arabic, data.name, targetAyah, cacheKey);
         } catch(e) {
             console.warn('Günün ayeti yüklenemedi:', e);
         }
+    }
+
+    async _fetchDailyVerseAI(meal, arabic, sureName, ayahNum, cacheKey) {
+        const bodyEl = document.getElementById('dvAiBody');
+        if (!bodyEl) return;
+
+        const showFallback = () => {
+            if (!bodyEl) return;
+            const fallbacks = [
+                `"${meal}" — Bu ayet, bugün sana özel bir hatırlatma. Kalbine nakşet, günün boyunca zihninde taşı.`,
+                `${sureName} Suresi'nin bu ayeti, her okunduğunda farklı bir derinlik sunar. Meali üzerinde sessizce düşün; belki bugün tam ihtiyacın olan söz budur.`,
+                `Yüce Allah'ın bu kelamı asırlar boyunca milyonlara rehberlik etti. "${meal}" — Bu sözü bugün için bir pusula olarak al.`
+            ];
+            const pick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+            bodyEl.style.color = '#94a3b8';
+            bodyEl.style.fontStyle = 'italic';
+            bodyEl.textContent = pick;
+        };
+
+        try {
+            const apiKey = this._getApiKey();
+            if (!apiKey) { showFallback(); return; }
+
+            const prompt = `Sen Kur'an-ı Kerim üzerine derin bilgiye sahip, samimi ve ilham verici bir İslam âlimisin. Aşağıdaki ayet hakkında Türkçe, kapsamlı ve kalbe dokunan bir günlük yorum yaz.\n\nYorumun şu bölümleri içersin:\n1. Ayetin genel mesajı ve ruhu (2-3 cümle)\n2. Bu ayetten hayata yansıtılabilecek pratik bir ders veya düşünce (2-3 cümle)\n3. Okuyucuya hitap eden, duygusal ve motive edici bir kapanış cümlesi\n\nDil akademik değil; sıcak, samimi ve insana dokunan bir üslupla yaz. Başlık veya madde numarası ekleme, akıcı paragraflar hâlinde yaz.\n\nAyet: ${arabic}\nMeali: ${meal}\nKaynak: ${sureName} Suresi, ${ayahNum}. Ayet`;
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 600 }
+                })
+            });
+            clearTimeout(timeout);
+
+            const data = await resp.json();
+            if (data.error) { showFallback(); return; }
+
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (text && bodyEl) {
+                bodyEl.style.color = '';
+                bodyEl.style.fontStyle = '';
+                bodyEl.textContent = '';
+                let i = 0;
+                const type = () => {
+                    if (i < text.length) { bodyEl.textContent += text[i++]; setTimeout(type, 16); }
+                    else {
+                        localStorage.setItem(cacheKey, text);
+                        for (let d = 4; d < 8; d++) {
+                            const o = new Date(); o.setDate(o.getDate()-d);
+                            const k = `qp_dv_ai_${o.getFullYear()*10000+(o.getMonth()+1)*100+o.getDate()}`;
+                            localStorage.removeItem(k);
+                        }
+                    }
+                };
+                type();
+            } else { showFallback(); }
+        } catch(e) {
+            showFallback();
+        }
+    }
+
+    _shareDailyVerse(sureName, ayahNum) {
+        const arabic = document.querySelector('.dv-arabic-text')?.textContent || '';
+        const meal   = document.querySelector('.dv-meal-text')?.textContent || '';
+        const text   = `📖 ${sureName} Suresi — ${ayahNum}. Ayet\n\n${arabic}\n\n${meal}\n\n— Kur'an-ı Kerim`;
+        if (navigator.share) navigator.share({ title: 'Günün Ayeti', text });
+        else navigator.clipboard.writeText(text).then(() => this._showToast('📋 Panoya kopyalandı!', '#6ee7b7'));
     }
 
     // ============================================================
@@ -1660,7 +1809,7 @@ class QuranPortal {
     // ─── Oyun 6: Ayet Sırala ─────────────────────────────────
     _startOrderGame() {
         if (!this.state.mealCache) { alert('Meal veritabanı yüklenmedi.'); return; }
-        this.orderGame = { score: 0, total: 0, correctOrder: [] };
+        this.orderGame = { score: 0, total: 0, correctOrder: [], _recorded: false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('orderArea').classList.remove('hidden');
         document.getElementById('orderNextBtn').classList.add('hidden');
@@ -1725,7 +1874,7 @@ class QuranPortal {
     // ─── Oyun 7: Sure Sırası ─────────────────────────────────
     _startSurahOrderGame() {
         if (this.state.surahMetadata.length < 4) return;
-        this.surahOrderGame = { score: 0, total: 0 };
+        this.surahOrderGame = { score: 0, total: 0, _recorded: false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('surahOrderArea').classList.remove('hidden');
         document.getElementById('surahOrderNextBtn').classList.add('hidden');
@@ -1768,7 +1917,7 @@ class QuranPortal {
     // ─── Oyun 8: Hızlı Bilgi (10 sn timer) ──────────────────
     _startSpeedQuiz() {
         if (this.state.surahMetadata.length < 4) return;
-        this.speedQuiz = { score: 0, total: 0 };
+        this.speedQuiz = { score: 0, total: 0, _recorded: false };
         this._speedQuizTimer = null;
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('speedQuizArea').classList.remove('hidden');
@@ -1838,6 +1987,7 @@ class QuranPortal {
         if (isCorrect) { btn.classList.add('correct'); this.speedQuiz.score++; document.getElementById('speedQuizFeedback').textContent='✅ Doğru!'; }
         else { btn.classList.add('wrong'); document.getElementById('speedQuizFeedback').textContent='❌ Yanlış!'; }
         document.getElementById('speedQuizScore').textContent = `${this.speedQuiz.score}/${this.speedQuiz.total}`;
+        if (this.speedQuiz.total % 10 === 0) { this.speedQuiz._recorded=false; this._tryRecordGameScore(); }
         document.getElementById('speedTimerFill').style.width = '0%';
         document.getElementById('speedQuizNextBtn').classList.remove('hidden');
     }
@@ -1849,13 +1999,111 @@ class QuranPortal {
     _initPrayerPanel() {
         const btn = document.getElementById('prayerSearchBtn');
         const inp = document.getElementById('prayerCityInput');
+        const locBtn = document.getElementById('prayerLocBtn');
+        const viewRow = document.getElementById('prayerCityViewRow');
+        const editRow = document.getElementById('prayerCityRow');
+        const cityDisplay = document.getElementById('prayerCityDisplay');
+        const editBtnEl = document.getElementById('prayerCityEditBtn');
+
+        const savedCity = localStorage.getItem('qp_prayer_city') || '';
+
+        const showCity = (city) => {
+            if (cityDisplay) cityDisplay.textContent = city;
+            if (viewRow) viewRow.style.display = 'flex';
+            if (editRow) editRow.style.display = 'none';
+        };
+        const showEdit = () => {
+            if (viewRow) viewRow.style.display = 'none';
+            if (editRow) editRow.style.display = 'flex';
+        };
+
+        if (savedCity) {
+            showCity(savedCity);
+            if (inp) inp.value = savedCity;
+            this._fetchPrayerTimes(savedCity);
+        } else {
+            showEdit();
+            if (inp) inp.value = 'Mersin';
+            this._fetchPrayerTimes('Mersin');
+        }
+
+        if (editBtnEl && !editBtnEl._bound) {
+            editBtnEl._bound = true;
+            editBtnEl.onclick = () => showEdit();
+        }
+
         if (btn && !btn._bound) {
             btn._bound = true;
-            btn.onclick = () => this._fetchPrayerTimes(inp.value.trim());
-            inp.onkeydown = (e) => { if(e.key==='Enter') this._fetchPrayerTimes(inp.value.trim()); };
+            btn.onclick = () => {
+                const city = inp ? inp.value.trim() : '';
+                if (!city) return;
+                localStorage.setItem('qp_prayer_city', city);
+                showCity(city);
+                this._fetchPrayerTimes(city);
+            };
         }
-        // Türkiye'deyse Istanbul varsayılan
-        if (!inp.value) { inp.value = 'Istanbul'; this._fetchPrayerTimes('Istanbul'); }
+
+        if (inp && !inp._bound) {
+            inp._bound = true;
+            inp.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    const city = inp.value.trim();
+                    if (!city) return;
+                    localStorage.setItem('qp_prayer_city', city);
+                    showCity(city);
+                    this._fetchPrayerTimes(city);
+                }
+            };
+        }
+
+        if (locBtn && !locBtn._bound) {
+            locBtn._bound = true;
+            locBtn.onclick = () => this._autoLocatePrayerCity('prayerCityInput', (city) => {
+                localStorage.setItem('qp_prayer_city', city);
+                showCity(city);
+                this._fetchPrayerTimes(city);
+            });
+        }
+    }
+
+    _autoLocatePrayerCity(inputId, onSuccess) {
+        const statusEl = document.getElementById('prayerCityInput_loc');
+        const inp = document.getElementById(inputId);
+        if (!navigator.geolocation) {
+            if (statusEl) statusEl.textContent = '❌ Tarayıcı konum desteklemiyor';
+            return;
+        }
+        // Daha önce kaydedilmiş şehir varsa tekrar izin isteme
+        const savedCity = localStorage.getItem('qp_geo_city');
+        if (savedCity) {
+            if (inp) inp.value = savedCity;
+            if (statusEl) { statusEl.textContent = `✅ ${savedCity}`; setTimeout(() => { if(statusEl) statusEl.textContent=''; }, 2000); }
+            if (onSuccess) onSuccess(savedCity);
+            return;
+        }
+        if (statusEl) statusEl.textContent = '📍 Konum alınıyor...';
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude: lat, longitude: lon } = pos.coords;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=tr`);
+                    const data = await res.json();
+                    const city = data.address?.city || data.address?.town || data.address?.county || data.address?.state || '';
+                    if (!city) { if (statusEl) statusEl.textContent = '❌ Şehir bulunamadı'; return; }
+                    localStorage.setItem('qp_geo_city', city);
+                    if (inp) inp.value = city;
+                    if (statusEl) statusEl.textContent = `✅ ${city}`;
+                    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+                    if (onSuccess) onSuccess(city);
+                } catch(e) {
+                    if (statusEl) statusEl.textContent = '❌ Konum çözümlenemedi';
+                }
+            },
+            (err) => {
+                if (statusEl) statusEl.textContent = '❌ Konum izni reddedildi';
+            },
+            { timeout: 10000 }
+        );
     }
 
     async _fetchPrayerTimes(city) {
@@ -1952,7 +2200,7 @@ class QuranPortal {
         const duas = [
             { cat: 'Sabah', arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ', tr: 'Sabahladık, mülk de Allah\'a sabahladı.', kaynak: 'Müslim' },
             { cat: 'Akşam', arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ', tr: 'Akşamladık, mülk de Allah\'a akşamladı.', kaynak: 'Müslim' },
-            { cat: 'Yemek', arabic: 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\nاَلْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِينَ\nاَللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا وَقِنَا عَذَابَ النَّارِ', tr: 'Rahman ve Rahim olan Allah\'ın adıyla. Bizi yediren, içiren ve Müslüman kılan Allah\'a hamdolsun. Allah\'ım, bize verdiğin rızıkta bereket ver ve bizi cehennem azabından koru.', kaynak: 'Ebu Davud / Tirmizi' },
+            { cat: 'Yemek', arabic: 'بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ', tr: 'Allah\'ın adıyla ve Allah\'ın bereketi ile.', kaynak: 'Ebu Davud' },
             { cat: 'Uyku', arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', tr: 'Allah\'ım, senin adınla ölür ve dirilirm.', kaynak: 'Buhari' },
             { cat: 'Yolculuk', arabic: 'سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا', tr: 'Bunu bize boyun eğdireni tesbih ederiz.', kaynak: 'Tirmizi' },
             { cat: 'Şifa', arabic: 'أَذْهِبِ الْبَأْسَ رَبَّ النَّاسِ', tr: 'Ey insanların Rabbi, sıkıntıyı gider.', kaynak: 'Buhari' },
@@ -2140,7 +2388,7 @@ class QuranPortal {
     // ============================================================
     _startWordComplete() {
         if (!this.state.mealCache) { alert('Meal yüklenmedi'); return; }
-        this.wcGame = { score:0, total:0, correct:'' };
+        this.wcGame = { score:0, total:0, correct:'', _recorded:false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('wordCompleteArea').classList.remove('hidden');
         document.getElementById('wcNextBtn').classList.add('hidden');
@@ -2176,6 +2424,7 @@ class QuranPortal {
         const inp = document.getElementById('wcInput').value.trim().toLowerCase().replace(/[,.:;!?]/g,'');
         if (!inp) return;
         this.wcGame.total++;
+        if (this.wcGame.total % 10 === 0) { this.wcGame._recorded=false; this._tryRecordGameScore(); }
         const correct = this.wcGame.correct;
         const isRight = inp===correct || inp===correct.replace(/[,.:;!?]/g,'');
         if (isRight) { this.wcGame.score++; document.getElementById('wcFeedback').innerHTML='✅ Doğru!'; }
@@ -2188,7 +2437,7 @@ class QuranPortal {
     // ✅ OYUN: DOĞRU / YANLIŞ
     // ============================================================
     _startTrueFalse() {
-        this.tfGame = { score:0, total:0, correct:null };
+        this.tfGame = { score:0, total:0, correct:null, _recorded:false };
         this._tfTimer = null;
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('trueFalseArea').classList.remove('hidden');
@@ -2220,6 +2469,7 @@ class QuranPortal {
     _tfAnswer(answer) {
         ['tfTrueBtn','tfFalseBtn'].forEach(id=>{ const b=document.getElementById(id); if(b)b.disabled=true; });
         this.tfGame.total++;
+        if (this.tfGame.total % 10 === 0) { this.tfGame._recorded=false; this._tryRecordGameScore(); }
         const isRight=answer===this.tfGame.correct;
         if (isRight) { this.tfGame.score++; document.getElementById('tfFeedback').textContent='✅ Doğru!'; }
         else { document.getElementById('tfFeedback').textContent='❌ Yanlış!'; }
@@ -2232,7 +2482,7 @@ class QuranPortal {
     // ============================================================
     _startSurahFirst() {
         if (!this.state.mealCache) { alert('Meal yüklenmedi'); return; }
-        this.sfGame = { score:0, total:0 };
+        this.sfGame = { score:0, total:0, _recorded:false };
         document.getElementById('gamesMenu').classList.add('hidden');
         document.getElementById('surahFirstArea').classList.remove('hidden');
         document.getElementById('sfNextBtn').classList.add('hidden');
@@ -2259,6 +2509,7 @@ class QuranPortal {
                 div.querySelectorAll('button').forEach(b=>b.disabled=true);
                 this.sfGame.total++;
                 if(opt.id===correct.id){btn.classList.add('correct');this.sfGame.score++;document.getElementById('sfFeedback').textContent='✅ Doğru!';}
+                if (this.sfGame.total % 10 === 0) { this.sfGame._recorded=false; this._tryRecordGameScore(); }
                 else{btn.classList.add('wrong');div.querySelectorAll('button').forEach(b=>{if(b.textContent===correct.name)b.classList.add('correct')});document.getElementById('sfFeedback').textContent=`❌ Doğrusu: ${correct.name}`;}
                 document.getElementById('sfScore').textContent=`${this.sfGame.score}/${this.sfGame.total}`;
                 document.getElementById('sfNextBtn').classList.remove('hidden');
@@ -2596,7 +2847,7 @@ class QuranPortal {
 
         let isOpen    = false;
         let curPage   = 1;
-        const PAGES   = 3;
+        const PAGES   = 4;
         let menuDragX, menuDragY, menuOrigLeft, menuOrigBottom, menuDragging = false;
 
         // ── SAYFA GEÇİŞİ (track kayma) ──
@@ -2605,7 +2856,7 @@ class QuranPortal {
             curPage = Math.max(1, Math.min(PAGES, n));
             if (track) {
                 // Her sayfa wrapper'ın 1/3'ü kadar — sola kaydır
-                track.style.transform = `translateX(-${(curPage - 1) * (100 / 3)}%)`;
+                track.style.transform = `translateX(-${(curPage - 1) * (100 / 4)}%)`;
             }
             document.querySelectorAll('.bubble-dot').forEach((d, i) => {
                 d.classList.toggle('active', i + 1 === curPage);
@@ -3042,9 +3293,12 @@ class QuranPortal {
             {ar:"الرَّشِيدُ",tr:"Er-Reşid",mean:"Doğru yola ileten"},
             {ar:"الصَّبُورُ",tr:"Es-Sabur",mean:"Çok sabırlı olan"}
         ];
+        const panel = document.getElementById('esmaPanel');
+        if (!panel) return;
         const content = document.getElementById('esmaContent');
-        if (!content) return;
-
+        if (!content || content.dataset.loaded) return;
+        content.dataset.loaded = '1';
+        let current = 0;
         const cards = esma.map((e,i) => `
             <div class="esma-card" onclick="this.classList.toggle('esma-flipped')" title="Tıkla - anlam göster">
                 <div class="esma-front">
@@ -3056,76 +3310,209 @@ class QuranPortal {
                     <div class="esma-meaning">${e.mean}</div>
                 </div>
             </div>`).join('');
-
-        const loadEsmaLeaderboard = async () => {
-            const lbDiv = document.getElementById('esmaLbContent');
-            if (!lbDiv) return;
-            lbDiv.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px;font-family:sans-serif">⏳ Yükleniyor...</div>';
-            try {
-                if (!window.FirebaseAuth) throw new Error('Firebase yok');
-                const { db, collection, getDocs, query, orderBy, limit } = window.FirebaseAuth;
-                const q = query(collection(db, 'esmaStats'), orderBy('esmaCount', 'desc'), limit(20));
-                const snap = await getDocs(q);
-                const medals = ['🥇','🥈','🥉'];
-                let rank = 1, rows = '';
-                snap.forEach(d => {
-                    const data = d.data();
-                    const name = data.displayName || data.email?.split('@')[0] || 'Anonim';
-                    const medal = medals[rank-1] || `${rank}.`;
-                    const pct = Math.round(((data.esmaCount||0)/99)*100);
-                    rows += `<div style="display:flex;align-items:center;gap:10px;background:${rank<=3?'rgba(212,175,55,0.08)':'#1e293b'};border:1px solid ${rank<=3?'#d4af3744':'#334155'};border-radius:10px;padding:10px 14px;margin-bottom:6px;font-family:sans-serif">
-                        <span style="font-size:1.2rem;min-width:28px">${medal}</span>
-                        <span style="color:#e2e8f0;flex:1;font-size:0.88rem;font-weight:${rank<=3?'bold':'normal'}">${name}</span>
-                        <div style="text-align:right">
-                            <div style="color:#d4af37;font-weight:bold;font-size:0.9rem">${data.esmaCount||0}/99</div>
-                            <div style="background:#0f172a;border-radius:4px;height:4px;width:60px;overflow:hidden;margin-top:3px">
-                                <div style="background:#d4af37;height:100%;width:${pct}%"></div>
-                            </div>
-                        </div>
-                    </div>`;
-                    rank++;
-                });
-                lbDiv.innerHTML = rows || '<div style="color:#64748b;text-align:center;padding:20px;font-family:sans-serif">Henüz kayıt yok.</div>';
-            } catch(e) {
-                lbDiv.innerHTML = '<div style="color:#f87171;font-family:sans-serif;font-size:0.85rem;padding:10px;text-align:center">Liderlik tablosu yüklenemedi.</div>';
-            }
-        };
-
         content.innerHTML = `
-            <div style="font-family:sans-serif;direction:ltr;margin-bottom:12px">
-                <div style="display:flex;gap:6px;margin-bottom:12px">
-                    <button id="esmaTabCards" style="flex:1;background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;border:none;border-radius:20px;padding:7px 0;font-size:0.82rem;font-weight:bold;cursor:pointer">✨ 99 İsim</button>
-                    <button id="esmaTabLb" style="flex:1;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:20px;padding:7px 0;font-size:0.82rem;font-weight:bold;cursor:pointer">🏆 Liderlik</button>
-                </div>
+            <div style="font-family:sans-serif;color:#94a3b8;font-size:0.75rem;text-align:center;margin-bottom:12px;direction:ltr">
+                Tıklayarak anlamını gör • 99 isim
             </div>
-            <div id="esmaCardsSection">
-                <div style="font-family:sans-serif;color:#94a3b8;font-size:0.75rem;text-align:center;margin-bottom:12px">
-                    Tıklayarak anlamını gör • 99 isim
-                </div>
-                <div class="esma-grid">${cards}</div>
-            </div>
-            <div id="esmaLbSection" style="display:none">
-                <div id="esmaLbContent"><div style="color:#94a3b8;text-align:center;padding:20px;font-family:sans-serif">🏆 Liderlik tablosunu görmek için tıkla</div></div>
-            </div>`;
-
-        document.getElementById('esmaTabCards').onclick = () => {
-            document.getElementById('esmaCardsSection').style.display = 'block';
-            document.getElementById('esmaLbSection').style.display = 'none';
-            document.getElementById('esmaTabCards').style.background = 'linear-gradient(135deg,#d4af37,#f59e0b)';
-            document.getElementById('esmaTabCards').style.color = '#000';
-            document.getElementById('esmaTabLb').style.background = '#1e293b';
-            document.getElementById('esmaTabLb').style.color = '#94a3b8';
-        };
-        document.getElementById('esmaTabLb').onclick = () => {
-            document.getElementById('esmaCardsSection').style.display = 'none';
-            document.getElementById('esmaLbSection').style.display = 'block';
-            document.getElementById('esmaTabLb').style.background = 'linear-gradient(135deg,#d4af37,#f59e0b)';
-            document.getElementById('esmaTabLb').style.color = '#000';
-            document.getElementById('esmaTabCards').style.background = '#1e293b';
-            document.getElementById('esmaTabCards').style.color = '#94a3b8';
-            loadEsmaLeaderboard();
-        };
+            <div class="esma-grid">${cards}</div>`;
     }
+
+
+    // ============================================================
+    // 🔑 API KEY YÖNETİMİ
+    // ============================================================
+    _getApiKey() {
+        return localStorage.getItem('qp_ai_key') || '';
+    }
+
+    _promptApiKey(onSuccess) {
+        const existing = this._getApiKey();
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
+        overlay.innerHTML = `
+        <div style="background:#1e293b;border:1.5px solid #d4af37;border-radius:16px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:2rem">🔑</div>
+            <div style="color:#d4af37;font-weight:bold;font-size:1rem;margin-top:6px">Google Gemini API Key Gerekli</div>
+            <div style="color:#94a3b8;font-size:0.8rem;margin-top:6px;line-height:1.6">
+              AI özellikler için Google Gemini API key'i gerekli.<br>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#38bdf8">aistudio.google.com</a>'dan ücretsiz alabilirsin.<br>
+              <span style="color:#475569;font-size:0.75rem">Key sadece bu cihazda localStorage'a kaydedilir.</span>
+            </div>
+          </div>
+          <input type="password" id="apiKeyInput" placeholder="AIza..." value="${existing}"
+            style="width:100%;background:#0f172a;border:1.5px solid #334155;color:#e2e8f0;border-radius:10px;padding:10px 14px;font-size:0.88rem;box-sizing:border-box;margin-bottom:12px;outline:none"
+          />
+          <div style="display:flex;gap:8px">
+            <button id="apiKeySaveBtn" style="flex:1;background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;border:none;border-radius:10px;padding:10px;cursor:pointer;font-weight:bold;font-size:0.88rem">💾 Kaydet ve Devam Et</button>
+            <button id="apiKeyCancelBtn" style="background:#334155;color:#94a3b8;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:0.88rem">İptal</button>
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#apiKeySaveBtn').onclick = () => {
+            const key = overlay.querySelector('#apiKeyInput').value.trim();
+            if (!key.startsWith('AIza')) { 
+                overlay.querySelector('#apiKeyInput').style.borderColor = '#f87171';
+                return; 
+            }
+            localStorage.setItem('qp_ai_key', key);
+            overlay.remove();
+            if (onSuccess) onSuccess(key);
+        };
+        overlay.querySelector('#apiKeyCancelBtn').onclick = () => overlay.remove();
+        setTimeout(() => overlay.querySelector('#apiKeyInput').focus(), 100);
+    }
+
+    _requireApiKey(onSuccess) {
+        const key = this._getApiKey();
+        if (key && key.startsWith('AIza')) { onSuccess(key); return; }
+        this._promptApiKey(onSuccess);
+    }
+
+    // ============================================================
+    // 🤖 KUR'AN AI SOHBET
+    // ============================================================
+    _initQuranChat() {
+        const content = document.getElementById('quranAiContent');
+        if (!content) return;
+        if (content._initialized) return;
+        content._initialized = true;
+        // API key yoksa hemen sor
+        if (!this._getApiKey()) {
+            this._promptApiKey(() => this._buildQuranChatUI(content));
+            return;
+        }
+        this._buildQuranChatUI(content);
+    }
+
+    _buildQuranChatUI(content) {
+
+        this._qaMessages = [];
+
+        content.style.cssText = 'display:flex;flex-direction:column;height:70vh;font-family:sans-serif;direction:ltr;position:relative';
+        content.innerHTML = `
+        <!-- Yakında Overlay -->
+        <div style="position:absolute;inset:0;z-index:10;background:rgba(10,22,40,0.92);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;gap:12px;padding:24px;text-align:center">
+          <div style="font-size:2.8rem">🚧</div>
+          <div style="color:#d4af37;font-weight:bold;font-size:1.1rem">Nur-AI Sohbet Yakında!</div>
+          <div style="color:#94a3b8;font-size:0.85rem;line-height:1.7;max-width:300px">
+            Kur'an-ı Kerim hakkında her şeyi sorabileceğin yapay zeka asistanı çok yakında burada.<br><br>
+            <span style="color:#64748b;font-size:0.78rem">Ayetler · Tefsir · İslam Tarihi · Hadisler</span>
+          </div>
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1.5px solid #d4af3740;border-radius:10px;padding:10px 18px;color:#64748b;font-size:0.78rem">
+            ✨ Geliştirme aşamasında — beklemede kal
+          </div>
+        </div>
+        <div id="qaChatBox" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#0a1628">
+          <div style="text-align:center;padding:20px 10px">
+            <div style="font-size:2.2rem;margin-bottom:8px">🤖</div>
+            <div style="color:#d4af37;font-weight:bold;font-size:1rem;margin-bottom:6px">Kur'an AI Sohbet Asistanı</div>
+            <div style="color:#64748b;font-size:0.82rem;line-height:1.6">Kur'an-ı Kerim hakkında merak ettiğin her şeyi sorabilirsin.<br>Ayetler, sureler, tefsir, İslam tarihi...</div>
+          </div>
+        </div>
+        <div style="padding:10px 12px;background:#1e293b;border-top:1px solid #334155;display:flex;gap:8px;align-items:flex-end">
+          <textarea id="qaInput" placeholder="Kur'an hakkında bir soru sor..." rows="2" disabled
+            style="flex:1;background:#0f172a;border:1.5px solid #334155;color:#475569;border-radius:10px;padding:8px 12px;font-size:0.88rem;resize:none;font-family:sans-serif;line-height:1.5;outline:none;cursor:not-allowed"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App._qaSend();}"></textarea>
+          <button onclick="App._qaSend()" id="qaSendBtn" disabled
+            style="background:#1e293b;color:#475569;border:1px solid #334155;border-radius:10px;padding:9px 16px;cursor:not-allowed;font-weight:bold;font-size:0.85rem;white-space:nowrap;align-self:flex-end">
+            Yakında ✦
+          </button>
+        </div>`;
+    }
+
+
+    async _qaSend() {
+        const inp = document.getElementById('qaInput');
+        const sendBtn = document.getElementById('qaSendBtn');
+        const chatBox = document.getElementById('qaChatBox');
+        if (!inp || !chatBox) return;
+        const text = inp.value.trim();
+        if (!text) return;
+
+        inp.value = '';
+        inp.style.height = 'auto';
+        if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '...'; }
+
+        // Kullanıcı mesajı
+        this._qaMessages.push({ role: 'user', parts: [{ text }] });
+        chatBox.innerHTML += `
+          <div style="display:flex;justify-content:flex-end">
+            <div style="background:linear-gradient(135deg,#1e3a5f,#1e293b);border:1px solid #334155;color:#e2e8f0;border-radius:14px 14px 4px 14px;padding:10px 14px;max-width:80%;font-size:0.88rem;line-height:1.6">${text.replace(/</g,'&lt;')}</div>
+          </div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Thinking animasyonu
+        const thinkId = 'qaThink_' + Date.now();
+        chatBox.innerHTML += `
+          <div id="${thinkId}" style="display:flex;align-items:center;gap:8px">
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:14px 14px 14px 4px;padding:10px 14px">
+              <span style="color:#d4af37;font-size:0.82rem">✦ Düşünüyor</span>
+              <span class="qa-dots" style="color:#d4af37">
+                <span style="animation:dvDot 1.2s infinite 0s">.</span>
+                <span style="animation:dvDot 1.2s infinite 0.4s">.</span>
+                <span style="animation:dvDot 1.2s infinite 0.8s">.</span>
+              </span>
+            </div>
+          </div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const apiKey = this._getApiKey();
+            if (!apiKey) { this._promptApiKey((k) => { if(k) this._qaSend(); }); if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='Gönder ✦';} return; }
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: { parts: [{ text: `Sen Kur'an-ı Kerim konusunda uzman, samimi ve bilgili bir İslami ilimler asistanısın. \nTürkçe konuşuyorsun. Kur'an ayetleri, sureler, tefsir, hadis, İslam tarihi, peygamberler ve İslami pratikler hakkında sorulara cevap ver.\nAyet referansı verirken (Sure Adı, Ayet No) formatını kullan. Yanıtların kısa, öz ve anlaşılır olsun.\nSaygılı, mütevazı ve öğretici bir dil kullan. Selamlaşmada "es-Selamu Aleyküm" gibi İslami selamları kullanabilirsin.` }] },
+                    contents: this._qaMessages,
+                    generationConfig: { maxOutputTokens: 800 }
+                })
+            });
+            const data = await resp.json();
+            if (data.error) {
+                const msg = data.error.message || JSON.stringify(data.error);
+                const thinkEl2 = document.getElementById(thinkId);
+                if (thinkEl2) thinkEl2.remove();
+                chatBox.innerHTML += `<div style="color:#f87171;font-size:0.8rem;background:#1e293b;border:1px solid #f8717140;border-radius:10px;padding:10px;margin:4px 0">❌ API Hatası: ${msg}<br><button onclick="App._promptApiKey()" style="margin-top:6px;background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.75rem">🔑 Key Güncelle</button></div>`;
+                if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='Gönder ✦';}
+                return;
+            }
+            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Üzgünüm, bir hata oluştu.';
+            this._qaMessages.push({ role: 'model', parts: [{ text: reply }] });
+
+            // Thinking'i kaldır, cevabı yaz
+            const thinkEl = document.getElementById(thinkId);
+            if (thinkEl) thinkEl.remove();
+
+            // Cevap baloncuğu oluştur
+            const replyDiv = document.createElement('div');
+            replyDiv.style.cssText = 'display:flex;align-items:flex-start;gap:8px';
+            replyDiv.innerHTML = `
+              <div style="font-size:1.2rem;margin-top:4px;flex-shrink:0">🤖</div>
+              <div style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:14px 14px 14px 4px;padding:10px 14px;max-width:85%;font-size:0.88rem;line-height:1.7" id="qaReply_${Date.now()}"></div>`;
+            chatBox.appendChild(replyDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Typewriter efekti
+            const replyEl = replyDiv.querySelector('div[id^="qaReply_"]');
+            let i = 0;
+            const tw = setInterval(() => {
+                if (i >= reply.length) { clearInterval(tw); return; }
+                replyEl.textContent += reply[i++];
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 12);
+
+        } catch(e) {
+            const thinkEl = document.getElementById(thinkId);
+            if (thinkEl) thinkEl.remove();
+            chatBox.innerHTML += `<div style="color:#f87171;font-size:0.8rem;background:#1e293b;border:1px solid #f8717140;border-radius:10px;padding:10px;margin:4px 0">❌ Hata: ${e.message}</div>`;
+        }
+
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Gönder ✦'; }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
 
     // ============================================================
     // 🏆 LİDERLİK TABLOSU
@@ -3133,54 +3520,167 @@ class QuranPortal {
     async _initLeaderboard() {
         const content = document.getElementById('leaderboardContent');
         if (!content) return;
-        content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
-        try {
-            if (!window.FirebaseAuth) throw new Error('Firebase yok');
-            const { db, collection, getDocs, query, orderBy, limit } = window.FirebaseAuth;
-            const q = query(collection(db, 'stats'), orderBy('ayahCount', 'desc'), limit(20));
-            const snap = await getDocs(q);
-            const rows = [];
-            let rank = 1;
-            snap.forEach(doc => {
-                const d = doc.data();
-                const name = d.displayName || d.email?.split('@')[0] || 'Anonim';
-                const medals = ['🥇','🥈','🥉'];
-                const medal = medals[rank-1] || `${rank}.`;
-                rows.push(`
-                    <div class="lb-row ${rank<=3?'lb-top':''}">
-                        <span class="lb-rank">${medal}</span>
-                        <span class="lb-name">${name}</span>
-                        <span class="lb-score">${(d.ayahCount||0).toLocaleString()} ayet</span>
-                        <span class="lb-surahs">${(d.surahsOpened||[]).length}/114 sure</span>
-                    </div>`);
-                rank++;
-            });
-            content.innerHTML = rows.length
-                ? `<div class="lb-list">${rows.join('')}</div>`
-                : '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">Henüz kayıt yok.</div>';
-        } catch(e) {
-            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;font-size:0.85rem;padding:10px">Liderlik tablosu yüklenemedi.</div>';
+        content.innerHTML = `
+        <div style="font-family:sans-serif;direction:ltr">
+          <!-- Sekmeler -->
+          <div style="display:flex;gap:6px;margin-bottom:14px;background:#0f172a;border-radius:10px;padding:4px">
+            <button id="lbTabGame"  onclick="App._lbShowTab('game')"  style="flex:1;padding:7px;border:none;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:bold;background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;transition:all 0.2s">🎮 Oyun Puanı</button>
+            <button id="lbTabRead"  onclick="App._lbShowTab('read')"  style="flex:1;padding:7px;border:none;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:bold;background:transparent;color:#64748b;transition:all 0.2s">📖 Okuma</button>
+            <button id="lbTabEsma"  onclick="App._lbShowTab('esma')"  style="flex:1;padding:7px;border:none;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:bold;background:transparent;color:#64748b;transition:all 0.2s">✨ Esmaül Hüsna</button>
+          </div>
+          <!-- Yakında uyarısı -->
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1.5px solid #d4af3740;border-radius:12px;padding:14px 16px;margin-bottom:14px;text-align:center">
+            <div style="font-size:1.4rem;margin-bottom:6px">🚧</div>
+            <div style="color:#d4af37;font-weight:bold;font-size:0.92rem;margin-bottom:4px">Liderlik Tablosu Yakında!</div>
+            <div style="color:#94a3b8;font-size:0.8rem;line-height:1.5">Oyun oyna, Kur'an oku, Esmaül Hüsna'yı tamamla —<br>puanların kaydediliyor. Sıralamanı çok yakında burada göreceksin! 🏆</div>
+          </div>
+          <div id="lbBody"><div style="color:#94a3b8;text-align:center;padding:20px">⏳ Yükleniyor...</div></div>
+        </div>`;
+        this._lbShowTab('game');
+    }
+
+    async _lbShowTab(tab) {
+        // Tab aktif stili
+        ['game','read','esma'].forEach(t => {
+            const btn = document.getElementById('lbTab' + t.charAt(0).toUpperCase() + t.slice(1));
+            if (!btn) return;
+            if (t === tab) {
+                btn.style.background = 'linear-gradient(135deg,#d4af37,#f59e0b)';
+                btn.style.color = '#000';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = '#64748b';
+            }
+        });
+        const body = document.getElementById('lbBody');
+        if (!body) return;
+        body.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
+
+        if (!window.FirebaseAuth) {
+            body.innerHTML = '<div style="color:#f87171;text-align:center;padding:20px">Firebase bağlantısı yok.</div>';
+            return;
         }
+        const { db, collection, getDocs, query, orderBy, limit } = window.FirebaseAuth;
+        const medals = ['🥇','🥈','🥉'];
+
+        try {
+            if (tab === 'game') {
+                // Oyun puanı liderlik tablosu
+                const q = query(collection(db, 'gameScores'), orderBy('totalPoints','desc'), limit(20));
+                const snap = await getDocs(q);
+                if (snap.empty) { body.innerHTML = this._lbEmpty('Henüz oyun oynanmadı. İlk sırada sen ol! 🎮'); return; }
+                const myUid = this.state.currentUser?.uid;
+                let rows = '', rank = 1;
+                snap.forEach(d => {
+                    const data = d.data();
+                    const name = data.displayName || 'Anonim';
+                    const pts  = (data.totalPoints || 0).toLocaleString();
+                    const gp   = data.gamesPlayed || 0;
+                    const isMe = d.id === myUid;
+                    const medal = medals[rank-1] || rank+'.';
+                    const bg   = rank===1 ? 'rgba(212,175,55,0.12)' : rank===2 ? 'rgba(148,163,184,0.08)' : rank===3 ? 'rgba(180,120,60,0.08)' : 'transparent';
+                    rows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:${bg};border:1px solid ${isMe?'#d4af37':'#1e293b'};margin-bottom:6px;transition:0.2s">
+                        <span style="font-size:1.15rem;min-width:28px;text-align:center">${medal}</span>
+                        <span style="flex:1;color:${isMe?'#d4af37':'#e2e8f0'};font-weight:${isMe?'bold':'normal'};font-size:0.9rem">${name}${isMe?' 👤':''}</span>
+                        <div style="text-align:right">
+                          <div style="color:#d4af37;font-weight:bold;font-size:0.95rem">${pts} puan</div>
+                          <div style="color:#64748b;font-size:0.7rem">${gp} oyun</div>
+                        </div>
+                    </div>`;
+                    rank++;
+                });
+                // Benim sıram yoksa en alta ekle
+                let myRankHtml = '';
+                if (myUid) {
+                    const myDoc = await window.FirebaseAuth.getDoc(window.FirebaseAuth.doc(db,'gameScores',myUid));
+                    if (myDoc.exists() && !rows.includes('👤')) {
+                        const d = myDoc.data();
+                        myRankHtml = `<div style="margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid #d4af37;background:rgba(212,175,55,0.08)">
+                            <span style="color:#d4af37;font-size:0.82rem">Senin puanın: <strong>${(d.totalPoints||0).toLocaleString()}</strong> — ${d.gamesPlayed||0} oyun</span>
+                        </div>`;
+                    }
+                }
+                body.innerHTML = `<div>${rows}</div>${myRankHtml}`;
+
+            } else if (tab === 'read') {
+                const q = query(collection(db, 'stats'), orderBy('ayahCount','desc'), limit(20));
+                const snap = await getDocs(q);
+                if (snap.empty) { body.innerHTML = this._lbEmpty('Henüz okuma kaydı yok.'); return; }
+                let rows = '', rank = 1;
+                snap.forEach(d => {
+                    const data = d.data();
+                    const name  = data.displayName || data.email?.split('@')[0] || 'Anonim';
+                    const ayah  = (data.ayahCount||0).toLocaleString();
+                    const sure  = (data.surahsOpened||[]).length;
+                    const medal = medals[rank-1] || rank+'.';
+                    const bg    = rank===1?'rgba(212,175,55,0.12)':rank===2?'rgba(148,163,184,0.08)':rank===3?'rgba(180,120,60,0.08)':'transparent';
+                    rows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:${bg};border:1px solid #1e293b;margin-bottom:6px">
+                        <span style="font-size:1.15rem;min-width:28px;text-align:center">${medal}</span>
+                        <span style="flex:1;color:#e2e8f0;font-size:0.88rem">${name}</span>
+                        <div style="text-align:right">
+                          <div style="color:#38bdf8;font-weight:bold;font-size:0.92rem">${ayah} ayet</div>
+                          <div style="color:#64748b;font-size:0.7rem">${sure}/114 sure</div>
+                        </div>
+                    </div>`;
+                    rank++;
+                });
+                body.innerHTML = rows;
+
+            } else if (tab === 'esma') {
+                const q = query(collection(db, 'esmaStats'), orderBy('esmaCount','desc'), limit(20));
+                const snap = await getDocs(q);
+                if (snap.empty) { body.innerHTML = this._lbEmpty('Henüz Esmaül Hüsna kaydı yok.'); return; }
+                let rows = '', rank = 1;
+                snap.forEach(d => {
+                    const data = d.data();
+                    const name  = data.displayName || 'Anonim';
+                    const cnt   = data.esmaCount || 0;
+                    const pct   = Math.min(100, Math.round((cnt/99)*100));
+                    const medal = medals[rank-1] || rank+'.';
+                    const bg    = rank===1?'rgba(212,175,55,0.12)':rank===2?'rgba(148,163,184,0.08)':rank===3?'rgba(180,120,60,0.08)':'transparent';
+                    rows += `<div style="padding:10px 12px;border-radius:10px;background:${bg};border:1px solid #1e293b;margin-bottom:6px">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+                            <span style="font-size:1.15rem;min-width:28px;text-align:center">${medal}</span>
+                            <span style="flex:1;color:#e2e8f0;font-size:0.88rem">${name}</span>
+                            <span style="color:#d4af37;font-weight:bold">${cnt}/99</span>
+                        </div>
+                        <div style="margin-left:38px;background:#1e293b;border-radius:4px;height:5px;overflow:hidden">
+                            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#d4af37,#f59e0b);transition:width 0.5s"></div>
+                        </div>
+                    </div>`;
+                    rank++;
+                });
+                body.innerHTML = rows;
+            }
+        } catch(e) {
+            body.innerHTML = `<div style="color:#f87171;text-align:center;padding:14px;font-size:0.85rem">Veri yüklenemedi: ${e.message}</div>`;
+        }
+    }
+
+    _lbEmpty(msg) {
+        return `<div style="text-align:center;padding:24px;color:#64748b;font-size:0.88rem">${msg}</div>`;
     }
 
     // ============================================================
     // 👥 HATİM GRUBU
     // ============================================================
     async _initHatimGroup() {
+        const panel = document.getElementById('hatimPanel');
+        if (!panel) return;
         const content = document.getElementById('hatimContent');
         if (!content) return;
         if (!window.FirebaseAuth || !this.state.currentUser) {
-            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:14px;text-align:center">👤 Hatim grubu için giriş yapmanız gerekiyor.</div>';
+            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:10px">Hatim grubu için giriş yapmanız gerekiyor.</div>';
             return;
         }
-        const { db, collection, getDocs } = window.FirebaseAuth;
+        const { db, collection, getDocs, doc, setDoc, getDoc, query } = window.FirebaseAuth;
+        // Mevcut hatim gruplarını çek
         content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
         try {
             const snap = await getDocs(collection(db, 'hatimGroups'));
-            const myUid = this.state.currentUser.uid;
             let html = `<div style="font-family:sans-serif;direction:ltr">
                 <div style="display:flex;gap:8px;margin-bottom:14px">
-                    <input id="hatimGroupName" placeholder="Yeni grup adı..." style="flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:0.85rem"/>
+                    <input id="hatimGroupName" placeholder="Grup adı..." style="flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:0.85rem"/>
                     <button onclick="App._createHatimGroup()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:0.85rem;font-weight:bold">+ Oluştur</button>
                 </div>
                 <div id="hatimGroupList">`;
@@ -3189,34 +3689,20 @@ class QuranPortal {
             } else {
                 snap.forEach(d => {
                     const g = d.data();
-                    const members = g.members || [];
-                    const assignments = g.assignments || {};
                     const prog = Math.round(((g.completedJuz||0)/30)*100);
-                    const totalAssigned = Object.values(assignments).filter(v=>v).length;
-                    const freeJuz = 30 - totalAssigned;
-                    const isMember = members.includes(myUid);
-                    const myJuzEntry = Object.entries(assignments).find(([juz, uid]) => uid === myUid);
-                    const myJuzNum = myJuzEntry ? myJuzEntry[0] : null;
-
                     html += `
-                        <div style="background:#1e293b;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid #334155">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                                <span style="color:#e2e8f0;font-weight:bold;font-size:0.95rem">📖 ${g.name||'Grup'}</span>
-                                <span style="color:#94a3b8;font-size:0.78rem">${members.length} üye • ${freeJuz} cüz müsait</span>
+                        <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #334155">
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <span style="color:#e2e8f0;font-weight:bold">${g.name||'Grup'}</span>
+                                <span style="color:#94a3b8;font-size:0.78rem">${(g.members||[]).length} üye</span>
                             </div>
-                            <div style="margin-bottom:10px">
+                            <div style="margin:8px 0">
                                 <div style="background:#0f172a;border-radius:4px;height:8px;overflow:hidden">
-                                    <div style="background:linear-gradient(90deg,#d4af37,#f59e0b);height:100%;width:${prog}%;transition:width 0.5s"></div>
+                                    <div style="background:#d4af37;height:100%;width:${prog}%;transition:width 0.5s"></div>
                                 </div>
-                                <div style="color:#94a3b8;font-size:0.72rem;margin-top:3px">${g.completedJuz||0}/30 Cüz tamamlandı — %${prog}</div>
+                                <div style="color:#94a3b8;font-size:0.72rem;margin-top:3px">${g.completedJuz||0}/30 Cüz tamamlandı (%${prog})</div>
                             </div>
-                            ${myJuzNum ? `<div style="background:rgba(212,175,55,0.1);border:1px solid #d4af3766;border-radius:8px;padding:6px 10px;margin-bottom:8px;color:#d4af37;font-size:0.82rem;font-weight:bold">📌 Senin cüzün: ${myJuzNum}. Cüz</div>` : ''}
-                            <div style="display:flex;gap:6px;flex-wrap:wrap">
-                                ${!isMember ? `<button onclick="App._joinHatimGroup('${d.id}')" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem">➕ Katıl</button>` : ''}
-                                ${isMember && !myJuzNum ? `<button onclick="App._showJuzPicker('${d.id}')" style="background:#d4af37;color:#000;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem;font-weight:bold">📋 Cüz Al</button>` : ''}
-                                ${myJuzNum ? `<button onclick="App._markJuzComplete('${d.id}','${myJuzNum}')" style="background:#059669;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem">✅ Tamamladım</button>` : ''}
-                                <button onclick="App._showHatimMembers('${d.id}')" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.78rem">👥 Üyeler</button>
-                            </div>
+                            <button onclick="App._joinHatimGroup('${d.id}')" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.78rem">Katıl</button>
                         </div>`;
                 });
             }
@@ -3227,130 +3713,6 @@ class QuranPortal {
         }
     }
 
-    async _showJuzPicker(groupId) {
-        if (!window.FirebaseAuth) return;
-        const { db, doc, getDoc } = window.FirebaseAuth;
-        const snap = await getDoc(doc(db, 'hatimGroups', groupId));
-        if (!snap.exists()) return;
-        const assignments = snap.data().assignments || {};
-        const myUid = this.state.currentUser.uid;
-
-        document.getElementById('juzPickerModal')?.remove();
-        const modal = document.createElement('div');
-        modal.id = 'juzPickerModal';
-        modal.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
-        const juzRows = Array.from({length:30},(_,i)=>i+1).map(n => {
-            const takenBy = assignments[n];
-            const isMe = takenBy === myUid;
-            const isTaken = takenBy && !isMe;
-            const bg = isMe ? '#1a3a2a' : isTaken ? '#3a1a1a' : '#0f2233';
-            const color = isMe ? '#6ee7b7' : isTaken ? '#fca5a566' : '#e2e8f0';
-            const border = isMe ? '#6ee7b7' : isTaken ? '#7f1d1d' : '#334155';
-            const label = isMe ? '(Sen)' : isTaken ? '🔒' : '✓';
-            const labelColor = isMe ? '#6ee7b7' : isTaken ? '#7f1d1d' : '#22c55e';
-            return `<button ${isTaken?'disabled':''} onclick="App._assignJuzToMe('${groupId}',${n})"
-                style="background:${bg};color:${color};border:1px solid ${border};border-radius:8px;padding:8px 4px;font-size:0.8rem;font-weight:bold;cursor:${isTaken?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;gap:2px">
-                <span>${n}</span>
-                <span style="font-size:0.6rem;color:${labelColor}">${label}</span>
-            </button>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div style="background:#0d1b2e;border:1px solid rgba(56,189,248,0.3);border-radius:16px;padding:20px;max-width:360px;width:100%;font-family:sans-serif;max-height:85vh;overflow-y:auto">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <span style="color:#d4af37;font-weight:bold;font-size:1rem">📋 Cüz Seç</span>
-                    <button onclick="document.getElementById('juzPickerModal').remove()" style="background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.82rem">✕</button>
-                </div>
-                <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:12px">🟢 Müsait &nbsp; 🔒 Dolu &nbsp; ✓ Senin</div>
-                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">${juzRows}</div>
-            </div>`;
-        document.body.appendChild(modal);
-        modal.onclick = (e) => { if(e.target===modal) modal.remove(); };
-    }
-
-    async _assignJuzToMe(groupId, juzNum) {
-        if (!window.FirebaseAuth) return;
-        const { db, doc, updateDoc, arrayUnion } = window.FirebaseAuth;
-        try {
-            await updateDoc(doc(db, 'hatimGroups', groupId), {
-                [`assignments.${juzNum}`]: this.state.currentUser.uid,
-                members: arrayUnion(this.state.currentUser.uid)
-            });
-            document.getElementById('juzPickerModal')?.remove();
-            this._showToast(`✅ ${juzNum}. Cüz sana atandı!`, '#6ee7b7');
-            this._initHatimGroup();
-        } catch(e) {
-            this._showToast('❌ Cüz atanamadı.', '#f87171');
-        }
-    }
-
-    async _markJuzComplete(groupId, juzNum) {
-        if (!window.FirebaseAuth) return;
-        const { db, doc, updateDoc, increment } = window.FirebaseAuth;
-        try {
-            await updateDoc(doc(db, 'hatimGroups', groupId), {
-                [`assignments.${juzNum}`]: null,
-                completedJuz: increment(1)
-            });
-            this._showToast(`🎉 ${juzNum}. Cüz tamamlandı! Hayırlı olsun!`, '#d4af37');
-            this._initHatimGroup();
-        } catch(e) {
-            this._showToast('❌ Güncelleme başarısız.', '#f87171');
-        }
-    }
-
-    async _showHatimMembers(groupId) {
-        if (!window.FirebaseAuth) return;
-        const { db, doc, getDoc } = window.FirebaseAuth;
-        const snap = await getDoc(doc(db, 'hatimGroups', groupId));
-        if (!snap.exists()) return;
-        const g = snap.data();
-        const members = g.members || [];
-        const assignments = g.assignments || {};
-        const myUid = this.state.currentUser.uid;
-
-        const memberJuzMap = {};
-        for (const [juz, uid] of Object.entries(assignments)) {
-            if (!uid) continue;
-            if (!memberJuzMap[uid]) memberJuzMap[uid] = [];
-            memberJuzMap[uid].push(Number(juz));
-        }
-
-        document.getElementById('hatimMembersModal')?.remove();
-        let memberRows = `<div style="color:#64748b;font-size:0.78rem;margin-bottom:10px;font-family:sans-serif">${members.length} üye • toplam ${Object.values(assignments).filter(v=>v).length} cüz atandı</div>`;
-        for (const uid of members) {
-            let name = uid.slice(0,8) + '...';
-            try {
-                const uSnap = await getDoc(doc(db, 'users', uid));
-                if (uSnap.exists()) { const ud = uSnap.data(); name = ud.displayName || ud.email?.split('@')[0] || name; }
-            } catch(e) {}
-            const juzList = (memberJuzMap[uid] || []).sort((a,b)=>a-b);
-            const isMe = uid === myUid;
-            memberRows += `
-                <div style="display:flex;align-items:center;gap:10px;background:${isMe?'rgba(212,175,55,0.08)':'#1e293b'};border:1px solid ${isMe?'#d4af3766':'#334155'};border-radius:10px;padding:10px 12px;margin-bottom:6px;font-family:sans-serif">
-                    <span style="font-size:1.1rem">👤</span>
-                    <div style="flex:1">
-                        <div style="color:${isMe?'#d4af37':'#e2e8f0'};font-size:0.88rem;font-weight:${isMe?'bold':'normal'}">${name}${isMe?' (Sen)':''}</div>
-                        <div style="color:#64748b;font-size:0.75rem;margin-top:2px">${juzList.length>0?`📖 Cüz: ${juzList.join(', ')}` : '⏳ Cüz atanmadı'}</div>
-                    </div>
-                </div>`;
-        }
-
-        const modal = document.createElement('div');
-        modal.id = 'hatimMembersModal';
-        modal.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
-        modal.innerHTML = `
-            <div style="background:#0d1b2e;border:1px solid rgba(56,189,248,0.3);border-radius:16px;padding:20px;max-width:380px;width:100%;font-family:sans-serif;max-height:85vh;overflow-y:auto">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                    <span style="color:#38bdf8;font-weight:bold;font-size:1rem">👥 ${g.name||'Grup'} — Üyeler</span>
-                    <button onclick="document.getElementById('hatimMembersModal').remove()" style="background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.82rem">✕</button>
-                </div>
-                ${memberRows}
-            </div>`;
-        document.body.appendChild(modal);
-        modal.onclick = (e) => { if(e.target===modal) modal.remove(); };
-    }
-
     async _createHatimGroup() {
         const name = document.getElementById('hatimGroupName')?.value?.trim();
         if (!name) return;
@@ -3358,7 +3720,7 @@ class QuranPortal {
         const { db, collection, addDoc } = window.FirebaseAuth;
         await addDoc(collection(db, 'hatimGroups'), {
             name, members: [this.state.currentUser.uid],
-            completedJuz: 0, assignments: {}, createdAt: Date.now(),
+            completedJuz: 0, createdAt: Date.now(),
             createdBy: this.state.currentUser.uid
         });
         this._showToast('✅ Hatim grubu oluşturuldu!', '#6ee7b7');
@@ -3372,7 +3734,6 @@ class QuranPortal {
             members: arrayUnion(this.state.currentUser.uid)
         });
         this._showToast('✅ Gruba katıldınız!', '#6ee7b7');
-        this._initHatimGroup();
     }
 
     // ============================================================
@@ -3381,30 +3742,325 @@ class QuranPortal {
     async _initNotifications() {
         const content = document.getElementById('notifContent');
         if (!content) return;
+
         const saved = JSON.parse(localStorage.getItem('qp_notif') || '{"enabled":false,"time":"07:00","msg":"Günlük Kuran okuma zamani! 📖"}');
+        const prayerCfg = JSON.parse(localStorage.getItem('qp_prayer_notif') || '{"enabled":false,"city":""}');
+        const savedPrayerCity = localStorage.getItem('qp_prayer_city') || prayerCfg.city || '';
+
+        const permColor = Notification.permission === 'granted' ? '#6ee7b7' : Notification.permission === 'denied' ? '#f87171' : '#fbbf24';
+        const permText = Notification.permission === 'granted' ? '✅ İzin Verildi' : Notification.permission === 'denied' ? '❌ Reddedildi' : '⚠️ İzin Gerekli';
+
         content.innerHTML = `
-            <div style="font-family:sans-serif;direction:ltr">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                    <label style="color:#e2e8f0;font-size:0.88rem">Bildirim:</label>
-                    <input type="checkbox" id="notifEnabled" ${saved.enabled?'checked':''} style="width:18px;height:18px;cursor:pointer"/>
-                    <span id="notifStatus" style="color:${saved.enabled?'#6ee7b7':'#64748b'};font-size:0.82rem">${saved.enabled?'Açık':'Kapalı'}</span>
-                </div>
-                <div style="margin-bottom:12px">
-                    <label style="color:#94a3b8;font-size:0.82rem;display:block;margin-bottom:4px">Hatırlatma saati:</label>
-                    <input type="time" id="notifTime" value="${saved.time}" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:0.9rem"/>
-                </div>
-                <div style="margin-bottom:12px">
-                    <label style="color:#94a3b8;font-size:0.82rem;display:block;margin-bottom:4px">Mesaj:</label>
-                    <input type="text" id="notifMsg" value="${saved.msg}" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:0.85rem;box-sizing:border-box"/>
-                </div>
-                <button onclick="App._saveNotification()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-weight:bold;font-size:0.85rem">💾 Kaydet</button>
-                <button onclick="App._testNotification()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:0.85rem;margin-left:8px">🔔 Test</button>
-            </div>`;
+        <div style="font-family:sans-serif;direction:ltr;display:flex;flex-direction:column;gap:16px">
+
+          <!-- İzin satırı -->
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+            <span style="color:#94a3b8;font-size:0.82rem">Bildirim İzni:</span>
+            <span id="notifPermSpan" style="color:${permColor};font-size:0.82rem;font-weight:bold">${permText}</span>
+            <button onclick="App._requestNotifPermission()" style="background:#0f2233;color:#38bdf8;border:1.5px solid #38bdf860;border-radius:8px;padding:4px 12px;cursor:pointer;font-size:0.78rem">İzin Ver</button>
+          </div>
+
+          <!-- Namaz Vakti Bildirimi -->
+          <div style="background:#1e293b;border:1.5px solid #334155;border-radius:12px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span style="font-size:1.1rem">🕌</span>
+              <span style="color:#e2e8f0;font-size:0.9rem;font-weight:bold;flex:1">Namaz Vakti Bildirimi</span>
+              <input type="checkbox" id="prayerNotifEnabled" ${prayerCfg.enabled?'checked':''} style="width:18px;height:18px;cursor:pointer"/>
+              <span id="prayerNotifStatus" style="color:${prayerCfg.enabled?'#6ee7b7':'#64748b'};font-size:0.8rem">${prayerCfg.enabled?'Açık':'Kapalı'}</span>
+            </div>
+
+            <!-- Şehir görüntü modu -->
+            <div id="pncViewRow" style="display:${savedPrayerCity?'flex':'none'};align-items:center;gap:8px;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:6px 10px;margin-bottom:8px">
+              <span>📍</span>
+              <span id="pncCityDisplay" style="flex:1;color:#e2e8f0;font-size:0.9rem">${savedPrayerCity}</span>
+              <button type="button" id="pncEditBtn" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1rem">✏️</button>
+            </div>
+
+            <!-- Şehir düzenleme modu -->
+            <div id="pncEditRow" style="display:${savedPrayerCity?'none':'flex'};gap:8px;margin-bottom:8px;flex-wrap:wrap">
+              <input type="text" id="pncCityInput" placeholder="Şehir (örn: Mersin)" value="${savedPrayerCity}" style="flex:1;min-width:120px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:6px 10px;font-size:0.85rem"/>
+              <button type="button" id="pncLocBtn" style="background:#0f2233;color:#38bdf8;border:1.5px solid #38bdf860;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.82rem">📍 Konum</button>
+            </div>
+            <div id="pncLocStatus" style="font-size:0.75rem;color:#94a3b8;min-height:14px;margin-bottom:8px"></div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" onclick="App._savePrayerNotif()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-weight:bold;font-size:0.82rem">💾 Kaydet</button>
+              <button type="button" onclick="App._testEzanSound()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:0.82rem">🔊 Ezan Test</button>
+            </div>
+
+            <!-- Namaz Vakitleri Mini Tablo -->
+            <div id="notifPrayerTimes" style="margin-top:14px"></div>
+          </div>
+
+          <!-- Günlük Okuma Bildirimi -->
+          <div style="background:#1e293b;border:1.5px solid #334155;border-radius:12px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span style="font-size:1.1rem">📖</span>
+              <span style="color:#e2e8f0;font-size:0.9rem;font-weight:bold;flex:1">Günlük Okuma Hatırlatıcı</span>
+              <input type="checkbox" id="notifEnabled" ${saved.enabled?'checked':''} style="width:18px;height:18px;cursor:pointer"/>
+              <span id="notifStatus" style="color:${saved.enabled?'#6ee7b7':'#64748b'};font-size:0.8rem">${saved.enabled?'Açık':'Kapalı'}</span>
+            </div>
+            <div style="margin-bottom:10px">
+              <label style="color:#94a3b8;font-size:0.8rem;display:block;margin-bottom:4px">Saat:</label>
+              <input type="time" id="notifTime" value="${saved.time}" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:0.9rem"/>
+            </div>
+            <div style="margin-bottom:12px">
+              <label style="color:#94a3b8;font-size:0.8rem;display:block;margin-bottom:4px">Mesaj:</label>
+              <input type="text" id="notifMsg" value="${saved.msg}" style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:6px 12px;border-radius:8px;font-size:0.85rem;box-sizing:border-box"/>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button type="button" onclick="App._saveNotification()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-weight:bold;font-size:0.82rem">💾 Kaydet</button>
+              <button type="button" onclick="App._testNotification()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:0.82rem">🔔 Test</button>
+            </div>
+          </div>
+
+        </div>`;
+
+        // Checkbox listeners
         document.getElementById('notifEnabled').onchange = function() {
             document.getElementById('notifStatus').textContent = this.checked ? 'Açık' : 'Kapalı';
             document.getElementById('notifStatus').style.color = this.checked ? '#6ee7b7' : '#64748b';
+            // Anında kaydet
+            const existing = JSON.parse(localStorage.getItem('qp_notif') || '{}');
+            existing.enabled = this.checked;
+            localStorage.setItem('qp_notif', JSON.stringify(existing));
         };
+        document.getElementById('prayerNotifEnabled').onchange = function() {
+            document.getElementById('prayerNotifStatus').textContent = this.checked ? 'Açık' : 'Kapalı';
+            document.getElementById('prayerNotifStatus').style.color = this.checked ? '#6ee7b7' : '#64748b';
+            // Anında kaydet
+            const existing = JSON.parse(localStorage.getItem('qp_prayer_notif') || '{}');
+            existing.enabled = this.checked;
+            localStorage.setItem('qp_prayer_notif', JSON.stringify(existing));
+        };
+
+        // Şehir edit toggle
+        const pncEditBtn = document.getElementById('pncEditBtn');
+        if (pncEditBtn) pncEditBtn.onclick = () => {
+            document.getElementById('pncViewRow').style.display = 'none';
+            document.getElementById('pncEditRow').style.display = 'flex';
+        };
+
+        // Konum butonu
+        const pncLocBtn = document.getElementById('pncLocBtn');
+        if (pncLocBtn) pncLocBtn.onclick = () => this._notifCityLocate();
+
         this._scheduleNotification(saved);
+        if (prayerCfg.enabled && savedPrayerCity) this._schedulePrayerNotifications(prayerCfg);
+        if (savedPrayerCity) this._loadNotifPrayerTimes(savedPrayerCity);
+    }
+
+
+    async _loadNotifPrayerTimes(city) {
+        const el = document.getElementById('notifPrayerTimes');
+        if (!el) return;
+        el.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:8px">⏳ Vakitler yükleniyor...</div>';
+        try {
+            const now = new Date();
+            const dateStr = now.toDateString();
+            const cacheKey = `qp_pt_${city}_${dateStr}`;
+            let times = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+            if (!times) {
+                const r = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=TR&method=13`);
+                const j = await r.json();
+                if (j.code !== 200) { el.innerHTML = `<div style="color:#f87171;font-size:0.78rem;text-align:center">${city} bulunamadı</div>`; return; }
+                times = j.data.timings;
+                localStorage.setItem(cacheKey, JSON.stringify(times));
+            }
+            const nowMin = now.getHours()*60 + now.getMinutes();
+            const prayers = [
+                { name:'İmsak',  time:times.Imsak,   icon:'🌙' },
+                { name:'Sabah',  time:times.Fajr,    icon:'🌅' },
+                { name:'Güneş',  time:times.Sunrise, icon:'☀️' },
+                { name:'Öğle',   time:times.Dhuhr,   icon:'🌞' },
+                { name:'İkindi', time:times.Asr,     icon:'🌇' },
+                { name:'Akşam',  time:times.Maghrib, icon:'🌆' },
+                { name:'Yatsı',  time:times.Isha,    icon:'🌃' },
+            ];
+            const toMin = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
+            let nextIdx = prayers.findIndex(p => toMin(p.time) > nowMin);
+            const activeIdx = nextIdx === -1 ? prayers.length-1 : nextIdx-1;
+            const rows = prayers.map((p,i) => {
+                const isActive = i === activeIdx;
+                const isPast = i < activeIdx;
+                const bg = isActive ? 'rgba(212,175,55,0.15)' : 'transparent';
+                const border = isActive ? '1px solid #d4af3760' : '1px solid transparent';
+                const color = isActive ? '#d4af37' : isPast ? '#475569' : '#cbd5e1';
+                return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;background:${bg};border:${border}">
+<span style="font-size:0.85rem;min-width:20px">${p.icon}</span>
+<span style="flex:1;color:${color};font-size:0.82rem">${p.name}</span>
+<span style="color:${isActive?'#d4af37':color};font-size:0.82rem;font-weight:${isActive?'bold':'normal'}">${p.time}${isActive?' ←':''}</span>
+</div>`;
+            }).join('');
+            el.innerHTML = `<div style="margin-top:4px;border:1px solid #1e293b;border-radius:10px;padding:6px;background:#0f172a">
+<div style="color:#64748b;font-size:0.72rem;text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #1e293b">📍 ${city} — Bugün</div>
+${rows}
+</div>`;
+        } catch(e) { el.innerHTML = '<div style="color:#f87171;font-size:0.78rem;text-align:center">Vakitler yüklenemedi</div>'; }
+    }
+
+    _notifCityLocate() {
+        const statusEl = document.getElementById('pncLocStatus');
+        const inp = document.getElementById('pncCityInput');
+        if (!navigator.geolocation) { if(statusEl) statusEl.textContent='❌ Konum desteklenmiyor'; return; }
+
+        // Daha önce kaydedilmiş şehir varsa tekrar izin isteme
+        const savedCity = localStorage.getItem('qp_geo_city');
+        if (savedCity) {
+            if (inp) inp.value = savedCity;
+            if (document.getElementById('pncCityDisplay')) document.getElementById('pncCityDisplay').textContent = savedCity;
+            if (document.getElementById('pncViewRow')) document.getElementById('pncViewRow').style.display = 'flex';
+            if (document.getElementById('pncEditRow')) document.getElementById('pncEditRow').style.display = 'none';
+            if (statusEl) { statusEl.textContent = `✅ ${savedCity}`; setTimeout(() => { if(statusEl) statusEl.textContent=''; }, 2000); }
+            this._loadNotifPrayerTimes(savedCity);
+            return;
+        }
+
+        if (statusEl) statusEl.textContent = '📍 Konum alınıyor...';
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=tr`);
+                    const data = await res.json();
+                    const city = data.address?.city || data.address?.town || data.address?.county || '';
+                    if (!city) { if(statusEl) statusEl.textContent='❌ Şehir bulunamadı'; return; }
+                    localStorage.setItem('qp_geo_city', city);
+                    if (inp) inp.value = city;
+                    document.getElementById('pncCityDisplay').textContent = city;
+                    document.getElementById('pncViewRow').style.display = 'flex';
+                    document.getElementById('pncEditRow').style.display = 'none';
+                    if (statusEl) statusEl.textContent = `✅ ${city}`;
+                    setTimeout(() => { if(statusEl) statusEl.textContent=''; }, 3000);
+                    this._loadNotifPrayerTimes(city);
+                } catch(e) { if(statusEl) statusEl.textContent='❌ Konum çözümlenemedi'; }
+            },
+            () => { if(statusEl) statusEl.textContent='❌ Konum izni reddedildi'; },
+            { timeout: 10000 }
+        );
+    }
+
+    _savePrayerNotif() {
+        const city = (document.getElementById('pncCityInput')?.value || document.getElementById('pncCityDisplay')?.textContent || '').trim();
+        const enabled = document.getElementById('prayerNotifEnabled')?.checked || false;
+        if (!city) { this._showToast('⚠️ Şehir giriniz', '#fbbf24'); return; }
+        const cfg = { enabled, city };
+        localStorage.setItem('qp_prayer_notif', JSON.stringify(cfg));
+        localStorage.setItem('qp_prayer_city', city);
+        document.getElementById('pncCityDisplay').textContent = city;
+        document.getElementById('pncViewRow').style.display = 'flex';
+        document.getElementById('pncEditRow').style.display = 'none';
+        this._showToast('✅ Namaz vakti bildirimi kaydedildi', '#6ee7b7');
+        if (enabled) this._schedulePrayerNotifications(cfg);
+        else if (this._prayerNotifInterval) { clearInterval(this._prayerNotifInterval); this._prayerNotifInterval = null; }
+        this._loadNotifPrayerTimes(city);
+    }
+
+    _schedulePrayerNotifications(cfg) {
+        if (this._prayerNotifInterval) clearInterval(this._prayerNotifInterval);
+        if (!cfg.enabled || !cfg.city) return;
+        const check = async () => {
+            const now = new Date();
+            const dateStr = now.toDateString();
+            const cacheKey = `qp_pt_${cfg.city}_${dateStr}`;
+            let times = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+            if (!times) {
+                try {
+                    const r = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(cfg.city)}&country=TR&method=13`);
+                    const j = await r.json();
+                    if (j.code === 200) {
+                        times = j.data.timings;
+                        localStorage.setItem(cacheKey, JSON.stringify(times));
+                    }
+                } catch(e) { return; }
+            }
+            if (!times) return;
+            const nowH = now.getHours(), nowM = now.getMinutes();
+            const prayers = [
+                { name:'İmsak',  time: times.Imsak   },
+                { name:'Sabah',  time: times.Fajr    },
+                { name:'Öğle',   time: times.Dhuhr   },
+                { name:'İkindi', time: times.Asr     },
+                { name:'Akşam',  time: times.Maghrib },
+                { name:'Yatsı',  time: times.Isha    },
+            ];
+            for (const p of prayers) {
+                const [ph, pm] = p.time.split(':').map(Number);
+                if (ph === nowH && pm === nowM) {
+                    const firedKey = `qp_pt_fired_${p.name}_${dateStr}`;
+                    if (localStorage.getItem(firedKey)) continue;
+                    localStorage.setItem(firedKey, '1');
+                    this._playEzanSound();
+                    if (Notification.permission === 'granted') {
+                        new Notification(`🕌 ${p.name} Vakti`, { body: `${cfg.city} için ${p.name} vakti girdi.`, icon: '/favicon.ico' });
+                    }
+                    this._showToast(`🕌 ${p.name} Vakti — ${cfg.city}`, '#d4af37');
+                }
+            }
+        };
+        this._prayerNotifInterval = setInterval(check, 15000);
+        check();
+    }
+
+    _playEzanSound() {
+        const audio = new Audio('audio/ezan.mp3');
+        audio.play().catch(() => this._playEzanSoundSynthetic());
+    }
+
+    _playEzanSoundSynthetic() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const notes = [262,294,330,349,392,440,392,349,330,294,262,220,247,262,294,330,349,294,262,247];
+            let time = ctx.currentTime;
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const vibrato = ctx.createOscillator();
+                const vibratoGain = ctx.createGain();
+                vibrato.frequency.value = 5.5;
+                vibratoGain.gain.value = 6;
+                vibrato.connect(vibratoGain);
+                vibratoGain.connect(osc.frequency);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(0.4, time + 0.08);
+                gain.gain.linearRampToValueAtTime(0, time + 0.52);
+                osc.start(time);
+                vibrato.start(time);
+                osc.stop(time + 0.55);
+                vibrato.stop(time + 0.55);
+                time += 0.56;
+            });
+        } catch(e) {}
+    }
+
+    _testEzanSound() {
+        this._playEzanSound();
+        this._showToast('🔊 Ezan sesi test ediliyor...', '#d4af37');
+    }
+
+    _requestNotifPermission() {
+        if (Notification.permission === 'denied') {
+            this._showToast('❌ Tarayıcı ayarlarından izin verin', '#f87171');
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            this._showToast('✅ Bildirim izni zaten verilmiş', '#6ee7b7');
+            return;
+        }
+        Notification.requestPermission().then(p => {
+            localStorage.setItem('qp_notif_perm_asked', '1');
+            const el = document.getElementById('notifPermSpan');
+            if (p === 'granted') {
+                if (el) { el.textContent = '✅ İzin Verildi'; el.style.color = '#6ee7b7'; }
+                this._showToast('✅ Bildirim izni verildi', '#6ee7b7');
+            } else {
+                if (el) { el.textContent = '❌ Reddedildi'; el.style.color = '#f87171'; }
+                this._showToast('❌ Bildirim izni reddedildi', '#f87171');
+            }
+        });
     }
 
     _saveNotification() {
@@ -3421,12 +4077,10 @@ class QuranPortal {
     _testNotification() {
         if (Notification.permission === 'granted') {
             new Notification('📖 Kur\'an-ı Kerim', { body: 'Test bildirimi başarılı!', icon: '/favicon.ico' });
-        } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission().then(p => {
-                if (p === 'granted') new Notification('📖 Kur\'an-ı Kerim', { body: 'Bildirimler aktif!', icon: '/favicon.ico' });
-            });
+        } else if (Notification.permission === 'denied') {
+            this._showToast('❌ Bildirim izni reddedildi. Tarayıcı ayarlarından açın.', '#f87171');
         } else {
-            this._showToast('❌ Bildirim izni reddedildi', '#f87171');
+            this._showToast('⚠️ Önce bildirim izni verin', '#fbbf24');
         }
     }
 
@@ -3443,11 +4097,8 @@ class QuranPortal {
                     localStorage.setItem('qp_notif_last', today);
                     if (Notification.permission === 'granted') {
                         new Notification('📖 Kur\'an-ı Kerim', { body: data.msg, icon: '/favicon.ico' });
-                    } else {
-                        Notification.requestPermission().then(p => {
-                            if (p === 'granted') new Notification('📖 Kur\'an-ı Kerim', { body: data.msg, icon: '/favicon.ico' });
-                        });
                     }
+                    // İzin yoksa sessizce geç — kullanıcı ayarlardan manuel verebilir
                 }
             }
         };
