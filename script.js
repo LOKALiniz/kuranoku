@@ -1,3 +1,7 @@
+/**
+ * 🕋 QURAN PORTAL OS v18.0 - FIREBASE EDITION
+ * Firebase Auth + Firestore + Kelime Tooltip + Meal Düzeltmesi
+ */
 
 class QuranPortal {
     constructor() {
@@ -3389,36 +3393,17 @@ class QuranPortal {
 
         this._qaMessages = [];
 
-        content.style.cssText = 'display:flex;flex-direction:column;height:70vh;font-family:sans-serif;direction:ltr;position:relative';
+        content.style.cssText = 'display:flex;flex-direction:column;height:70vh;font-family:sans-serif;direction:ltr;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0a1628;border-radius:12px';
         content.innerHTML = `
-        <!-- Yakında Overlay -->
-        <div style="position:absolute;inset:0;z-index:10;background:rgba(10,22,40,0.92);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;gap:12px;padding:24px;text-align:center">
-          <div style="font-size:2.8rem">🚧</div>
-          <div style="color:#d4af37;font-weight:bold;font-size:1.1rem">Nur-AI Sohbet Yakında!</div>
-          <div style="color:#94a3b8;font-size:0.85rem;line-height:1.7;max-width:300px">
-            Kur'an-ı Kerim hakkında her şeyi sorabileceğin yapay zeka asistanı çok yakında burada.<br><br>
+          <div style="font-size:2.8rem;margin-bottom:12px">🚧</div>
+          <div style="color:#d4af37;font-weight:bold;font-size:1.1rem;margin-bottom:10px">Nur-AI Sohbet Yakında!</div>
+          <div style="color:#94a3b8;font-size:0.85rem;line-height:1.8;max-width:300px;margin-bottom:16px">
+            Kur'an-ı Kerim hakkında her şeyi sorabileceğin yapay zeka asistanı çok yakında burada.<br>
             <span style="color:#64748b;font-size:0.78rem">Ayetler · Tefsir · İslam Tarihi · Hadisler</span>
           </div>
-          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1.5px solid #d4af3740;border-radius:10px;padding:10px 18px;color:#64748b;font-size:0.78rem">
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1.5px solid #d4af3740;border-radius:10px;padding:10px 20px;color:#64748b;font-size:0.78rem">
             ✨ Geliştirme aşamasında — beklemede kal
-          </div>
-        </div>
-        <div id="qaChatBox" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#0a1628">
-          <div style="text-align:center;padding:20px 10px">
-            <div style="font-size:2.2rem;margin-bottom:8px">🤖</div>
-            <div style="color:#d4af37;font-weight:bold;font-size:1rem;margin-bottom:6px">Kur'an AI Sohbet Asistanı</div>
-            <div style="color:#64748b;font-size:0.82rem;line-height:1.6">Kur'an-ı Kerim hakkında merak ettiğin her şeyi sorabilirsin.<br>Ayetler, sureler, tefsir, İslam tarihi...</div>
-          </div>
-        </div>
-        <div style="padding:10px 12px;background:#1e293b;border-top:1px solid #334155;display:flex;gap:8px;align-items:flex-end">
-          <textarea id="qaInput" placeholder="Kur'an hakkında bir soru sor..." rows="2" disabled
-            style="flex:1;background:#0f172a;border:1.5px solid #334155;color:#475569;border-radius:10px;padding:8px 12px;font-size:0.88rem;resize:none;font-family:sans-serif;line-height:1.5;outline:none;cursor:not-allowed"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App._qaSend();}"></textarea>
-          <button onclick="App._qaSend()" id="qaSendBtn" disabled
-            style="background:#1e293b;color:#475569;border:1px solid #334155;border-radius:10px;padding:9px 16px;cursor:not-allowed;font-weight:bold;font-size:0.85rem;white-space:nowrap;align-self:flex-end">
-            Yakında ✦
-          </button>
-        </div>`;
+          </div>`;
     }
 
 
@@ -3669,48 +3654,21 @@ class QuranPortal {
         if (!panel) return;
         const content = document.getElementById('hatimContent');
         if (!content) return;
-        if (!window.FirebaseAuth || !this.state.currentUser) {
-            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:10px">Hatim grubu için giriş yapmanız gerekiyor.</div>';
-            return;
-        }
-        const { db, collection, getDocs, doc, setDoc, getDoc, query } = window.FirebaseAuth;
-        // Mevcut hatim gruplarını çek
-        content.innerHTML = '<div style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:20px">⏳ Yükleniyor...</div>';
-        try {
-            const snap = await getDocs(collection(db, 'hatimGroups'));
-            let html = `<div style="font-family:sans-serif;direction:ltr">
-                <div style="display:flex;gap:8px;margin-bottom:14px">
-                    <input id="hatimGroupName" placeholder="Grup adı..." style="flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:0.85rem"/>
-                    <button onclick="App._createHatimGroup()" style="background:#d4af37;color:#000;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:0.85rem;font-weight:bold">+ Oluştur</button>
-                </div>
-                <div id="hatimGroupList">`;
-            if (snap.empty) {
-                html += '<div style="color:#64748b;text-align:center;padding:16px">Henüz grup yok. İlk grubu oluştur!</div>';
-            } else {
-                snap.forEach(d => {
-                    const g = d.data();
-                    const prog = Math.round(((g.completedJuz||0)/30)*100);
-                    html += `
-                        <div style="background:#1e293b;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #334155">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span style="color:#e2e8f0;font-weight:bold">${g.name||'Grup'}</span>
-                                <span style="color:#94a3b8;font-size:0.78rem">${(g.members||[]).length} üye</span>
-                            </div>
-                            <div style="margin:8px 0">
-                                <div style="background:#0f172a;border-radius:4px;height:8px;overflow:hidden">
-                                    <div style="background:#d4af37;height:100%;width:${prog}%;transition:width 0.5s"></div>
-                                </div>
-                                <div style="color:#94a3b8;font-size:0.72rem;margin-top:3px">${g.completedJuz||0}/30 Cüz tamamlandı (%${prog})</div>
-                            </div>
-                            <button onclick="App._joinHatimGroup('${d.id}')" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.78rem">Katıl</button>
-                        </div>`;
-                });
-            }
-            html += '</div></div>';
-            content.innerHTML = html;
-        } catch(e) {
-            content.innerHTML = '<div style="color:#f87171;font-family:sans-serif;padding:10px">Hatim grubu yüklenemedi.</div>';
-        }
+
+        content.innerHTML = `
+        <div style="font-family:sans-serif;direction:ltr">
+          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1.5px solid #d4af3740;border-radius:12px;padding:20px;margin-bottom:14px;text-align:center">
+            <div style="font-size:1.8rem;margin-bottom:8px">🚧</div>
+            <div style="color:#d4af37;font-weight:bold;font-size:0.95rem;margin-bottom:6px">Hatim Grubu Yakında!</div>
+            <div style="color:#94a3b8;font-size:0.8rem;line-height:1.6">
+              Arkadaşlarınla grup kurarak birlikte Kur'an hatmi yapabileceğin bu özellik çok yakında geliyor.<br><br>
+              <span style="color:#64748b;font-size:0.75rem">Grup oluştur · Cüz paylaş · İlerlemeyi takip et · Birlikte tamamla 📖</span>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;text-align:center">
+            <div style="color:#64748b;font-size:0.78rem">✨ Geliştirme aşamasında — beklemede kal</div>
+          </div>
+        </div>`;
     }
 
     async _createHatimGroup() {
@@ -3747,8 +3705,9 @@ class QuranPortal {
         const prayerCfg = JSON.parse(localStorage.getItem('qp_prayer_notif') || '{"enabled":false,"city":""}');
         const savedPrayerCity = localStorage.getItem('qp_prayer_city') || prayerCfg.city || '';
 
-        const permColor = Notification.permission === 'granted' ? '#6ee7b7' : Notification.permission === 'denied' ? '#f87171' : '#fbbf24';
-        const permText = Notification.permission === 'granted' ? '✅ İzin Verildi' : Notification.permission === 'denied' ? '❌ Reddedildi' : '⚠️ İzin Gerekli';
+        const notifSupported = typeof Notification !== 'undefined';
+        const permColor = !notifSupported ? '#64748b' : Notification.permission === 'granted' ? '#6ee7b7' : Notification.permission === 'denied' ? '#f87171' : '#fbbf24';
+        const permText  = !notifSupported ? '⚠️ Desteklenmiyor' : Notification.permission === 'granted' ? '✅ İzin Verildi' : Notification.permission === 'denied' ? '❌ Reddedildi' : '⚠️ İzin Gerekli';
 
         content.innerHTML = `
         <div style="font-family:sans-serif;direction:ltr;display:flex;flex-direction:column;gap:16px">
@@ -4042,6 +4001,10 @@ ${rows}
     }
 
     _requestNotifPermission() {
+        if (typeof Notification === 'undefined') {
+            this._showToast('⚠️ Bu tarayıcı bildirimleri desteklemiyor', '#fbbf24');
+            return;
+        }
         if (Notification.permission === 'denied') {
             this._showToast('❌ Tarayıcı ayarlarından izin verin', '#f87171');
             return;
@@ -4075,6 +4038,7 @@ ${rows}
     }
 
     _testNotification() {
+        if (typeof Notification === 'undefined') { this._showToast('⚠️ Bu tarayıcı bildirimleri desteklemiyor', '#fbbf24'); return; }
         if (Notification.permission === 'granted') {
             new Notification('📖 Kur\'an-ı Kerim', { body: 'Test bildirimi başarılı!', icon: '/favicon.ico' });
         } else if (Notification.permission === 'denied') {
@@ -4086,7 +4050,7 @@ ${rows}
 
     _scheduleNotification(data) {
         if (this._notifInterval) clearInterval(this._notifInterval);
-        if (!data.enabled) return;
+        if (!data.enabled || typeof Notification === 'undefined') return;
         const check = () => {
             const now = new Date();
             const [h,m] = data.time.split(':').map(Number);
