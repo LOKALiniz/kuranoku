@@ -11,7 +11,6 @@ class QuranPortal {
             scrollOffset: 250,
             animationDuration: 2500,
             renderBatchSize: 12,
-            aiName: "Nur-AI v18.0",
             parallelTasks: 30,
             audioPath: 'audio/',
             mealPath: 'meal/meal.json',
@@ -408,7 +407,6 @@ class QuranPortal {
             hatimBtn: document.getElementById('hatimButton'),
             hatimPanel: document.getElementById('hatimPanel'),
             notifBtn: document.getElementById('notifButton'),
-            quranAiBtn: document.getElementById('quranAiBtn'),
             offlineBtn: document.getElementById('offlineButton'),
             notifPanel: document.getElementById('notifPanel'),
             fontSlider: document.getElementById('fontSizeSlider'),
@@ -527,7 +525,6 @@ class QuranPortal {
         if (this.dom.hatimBtn) this.dom.hatimBtn.onclick = () => { this._openModal('hatimOverlay'); this._initHatimGroup(); };
         if (this.dom.notifBtn) this.dom.notifBtn.onclick = () => { this._openModal('notifOverlay'); this._initNotifications(); };
         if (this.dom.offlineBtn) this.dom.offlineBtn.onclick = () => { this._openModal('offlineOverlay'); this._initOfflinePanel(); };
-        if (this.dom.quranAiBtn) this.dom.quranAiBtn.onclick = () => { this._openModal('quranAiOverlay'); this._initQuranChat(); };
         // Bubble page 2 extra butonlar
         const adminBtn2 = document.getElementById('bubbleAdminBtn');
         if (adminBtn2) adminBtn2.onclick = () => { document.getElementById('adminPanelOverlay')?.classList.remove('hidden'); setTimeout(close,80); };
@@ -1606,23 +1603,18 @@ class QuranPortal {
             if (!this.state.mealCache) await this._loadMealDatabase();
             const meal = this.state.mealCache?.[targetSurah]?.find(v => v.verse === targetAyah)?.text || '';
 
-            // AI yorumu önbellekten kontrol
-            const cacheKey = `qp_dv_ai_${rawSeed}`;
+            // HTML'i yeni yapıya göre render et
+            const cacheKey = `qp_dv_ai_${targetSurah}_${targetAyah}`;
             const cachedAI = localStorage.getItem(cacheKey);
 
-            // HTML'i yeni yapıya göre render et
             box.innerHTML = `
                 <div class="dv-badge">🌟 Günün Ayeti</div>
                 <div class="dv-arabic-text">${arabic}</div>
                 <div class="dv-meal-text">${meal}</div>
                 <div class="dv-ref-text">📖 ${data.name} Suresi &mdash; ${targetAyah}. Ayet</div>
                 <div class="dv-ai-block">
-                    <div class="dv-ai-label">✨ Nur-AI Yorumu</div>
-                    <div class="dv-ai-body" id="dvAiBody">${
-                        cachedAI
-                        ? cachedAI
-                        : '<span class="dv-thinking"><span></span><span></span><span></span></span>'
-                    }</div>
+                    <div class="dv-ai-label">✨ NUR-AI Yorumu</div>
+                    <div class="dv-ai-body" id="dvAiBody" style="color:#94a3b8;font-size:0.88rem;line-height:1.7;font-style:italic">${cachedAI || '<span class="dv-thinking"><span></span><span></span><span></span></span>'}</div>
                 </div>
                 <button class="dv-share-btn" onclick="App._shareDailyVerse('${data.name}',${targetAyah})">📤 Paylaş</button>`;
             box.style.display = '';
@@ -1633,68 +1625,26 @@ class QuranPortal {
         }
     }
 
-    async _fetchDailyVerseAI(meal, arabic, sureName, ayahNum, cacheKey) {
+    _fetchDailyVerseAI(meal, arabic, sureName, ayahNum, cacheKey) {
         const bodyEl = document.getElementById('dvAiBody');
         if (!bodyEl) return;
-
-        const showFallback = () => {
-            if (!bodyEl) return;
-            const fallbacks = [
-                `"${meal}" — Bu ayet, bugün sana özel bir hatırlatma. Kalbine nakşet, günün boyunca zihninde taşı.`,
-                `${sureName} Suresi'nin bu ayeti, her okunduğunda farklı bir derinlik sunar. Meali üzerinde sessizce düşün; belki bugün tam ihtiyacın olan söz budur.`,
-                `Yüce Allah'ın bu kelamı asırlar boyunca milyonlara rehberlik etti. "${meal}" — Bu sözü bugün için bir pusula olarak al.`
-            ];
-            const pick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-            bodyEl.style.color = '#94a3b8';
-            bodyEl.style.fontStyle = 'italic';
-            bodyEl.textContent = pick;
+        const fallbacks = [
+            `"${meal}" — Bu ayet, bugün sana özel bir hatırlatma. Kalbine nakşet, günün boyunca zihninde taşı.`,
+            `${sureName} Suresi'nin bu ayeti, her okunduğunda farklı bir derinlik sunar. Meali üzerinde sessizce düşün; belki bugün tam ihtiyacın olan söz budur.`,
+            `Yüce Allah'ın bu kelamı asırlar boyunca milyonlara rehberlik etti. "${meal}" — Bu sözü bugün için bir pusula olarak al.`,
+            `Bu ayet bir davet; duraksayıp düşünmek, kalbini açmak için. "${meal}" — Bugün bu sözle yürü.`,
+            `${sureName} Suresi bize hatırlatıyor: Her zorlukta, her sevinçte Allah'ın kelamına dönmek en büyük huzurun kapısıdır.`
+        ];
+        const pick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        bodyEl.style.fontStyle = 'italic';
+        bodyEl.style.color = '#94a3b8';
+        bodyEl.textContent = '';
+        let i = 0;
+        const type = () => {
+            if (i < pick.length) { bodyEl.textContent += pick[i++]; setTimeout(type, 18); }
+            else { localStorage.setItem(cacheKey, pick); }
         };
-
-        try {
-            const apiKey = this._getApiKey();
-            if (!apiKey) { showFallback(); return; }
-
-            const prompt = `Sen Kur'an-ı Kerim üzerine derin bilgiye sahip, samimi ve ilham verici bir İslam âlimisin. Aşağıdaki ayet hakkında Türkçe, kapsamlı ve kalbe dokunan bir günlük yorum yaz.\n\nYorumun şu bölümleri içersin:\n1. Ayetin genel mesajı ve ruhu (2-3 cümle)\n2. Bu ayetten hayata yansıtılabilecek pratik bir ders veya düşünce (2-3 cümle)\n3. Okuyucuya hitap eden, duygusal ve motive edici bir kapanış cümlesi\n\nDil akademik değil; sıcak, samimi ve insana dokunan bir üslupla yaz. Başlık veya madde numarası ekleme, akıcı paragraflar hâlinde yaz.\n\nAyet: ${arabic}\nMeali: ${meal}\nKaynak: ${sureName} Suresi, ${ayahNum}. Ayet`;
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 8000);
-
-            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: controller.signal,
-                body: JSON.stringify({
-                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                    generationConfig: { maxOutputTokens: 600 }
-                })
-            });
-            clearTimeout(timeout);
-
-            const data = await resp.json();
-            if (data.error) { showFallback(); return; }
-
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (text && bodyEl) {
-                bodyEl.style.color = '';
-                bodyEl.style.fontStyle = '';
-                bodyEl.textContent = '';
-                let i = 0;
-                const type = () => {
-                    if (i < text.length) { bodyEl.textContent += text[i++]; setTimeout(type, 16); }
-                    else {
-                        localStorage.setItem(cacheKey, text);
-                        for (let d = 4; d < 8; d++) {
-                            const o = new Date(); o.setDate(o.getDate()-d);
-                            const k = `qp_dv_ai_${o.getFullYear()*10000+(o.getMonth()+1)*100+o.getDate()}`;
-                            localStorage.removeItem(k);
-                        }
-                    }
-                };
-                type();
-            } else { showFallback(); }
-        } catch(e) {
-            showFallback();
-        }
+        type();
     }
 
     _shareDailyVerse(sureName, ayahNum) {
@@ -3325,180 +3275,6 @@ class QuranPortal {
     // ============================================================
     // 🔑 API KEY YÖNETİMİ
     // ============================================================
-    _getApiKey() {
-        return localStorage.getItem('qp_ai_key') || '';
-    }
-
-    _promptApiKey(onSuccess) {
-        const existing = this._getApiKey();
-        const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
-        overlay.innerHTML = `
-        <div style="background:#1e293b;border:1.5px solid #d4af37;border-radius:16px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
-          <div style="text-align:center;margin-bottom:16px">
-            <div style="font-size:2rem">🔑</div>
-            <div style="color:#d4af37;font-weight:bold;font-size:1rem;margin-top:6px">Google Gemini API Key Gerekli</div>
-            <div style="color:#94a3b8;font-size:0.8rem;margin-top:6px;line-height:1.6">
-              AI özellikler için Google Gemini API key'i gerekli.<br>
-              <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#38bdf8">aistudio.google.com</a>'dan ücretsiz alabilirsin.<br>
-              <span style="color:#475569;font-size:0.75rem">Key sadece bu cihazda localStorage'a kaydedilir.</span>
-            </div>
-          </div>
-          <input type="password" id="apiKeyInput" placeholder="AIza..." value="${existing}"
-            style="width:100%;background:#0f172a;border:1.5px solid #334155;color:#e2e8f0;border-radius:10px;padding:10px 14px;font-size:0.88rem;box-sizing:border-box;margin-bottom:12px;outline:none"
-          />
-          <div style="display:flex;gap:8px">
-            <button id="apiKeySaveBtn" style="flex:1;background:linear-gradient(135deg,#d4af37,#f59e0b);color:#000;border:none;border-radius:10px;padding:10px;cursor:pointer;font-weight:bold;font-size:0.88rem">💾 Kaydet ve Devam Et</button>
-            <button id="apiKeyCancelBtn" style="background:#334155;color:#94a3b8;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:0.88rem">İptal</button>
-          </div>
-        </div>`;
-        document.body.appendChild(overlay);
-        overlay.querySelector('#apiKeySaveBtn').onclick = () => {
-            const key = overlay.querySelector('#apiKeyInput').value.trim();
-            if (!key.startsWith('AIza')) { 
-                overlay.querySelector('#apiKeyInput').style.borderColor = '#f87171';
-                return; 
-            }
-            localStorage.setItem('qp_ai_key', key);
-            overlay.remove();
-            if (onSuccess) onSuccess(key);
-        };
-        overlay.querySelector('#apiKeyCancelBtn').onclick = () => overlay.remove();
-        setTimeout(() => overlay.querySelector('#apiKeyInput').focus(), 100);
-    }
-
-    _requireApiKey(onSuccess) {
-        const key = this._getApiKey();
-        if (key && key.startsWith('AIza')) { onSuccess(key); return; }
-        this._promptApiKey(onSuccess);
-    }
-
-    // ============================================================
-    // 🤖 KUR'AN AI SOHBET
-    // ============================================================
-    _initQuranChat() {
-        const content = document.getElementById('quranAiContent');
-        if (!content) return;
-        if (content._initialized) return;
-        content._initialized = true;
-        // API key yoksa hemen sor
-        if (!this._getApiKey()) {
-            this._promptApiKey(() => this._buildQuranChatUI(content));
-            return;
-        }
-        this._buildQuranChatUI(content);
-    }
-
-    _buildQuranChatUI(content) {
-
-        this._qaMessages = [];
-
-        content.style.cssText = 'display:flex;flex-direction:column;height:70vh;font-family:sans-serif;direction:ltr;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0a1628;border-radius:12px';
-        content.innerHTML = `
-          <div style="font-size:2.8rem;margin-bottom:12px">🚧</div>
-          <div style="color:#d4af37;font-weight:bold;font-size:1.1rem;margin-bottom:10px">Nur-AI Sohbet Yakında!</div>
-          <div style="color:#94a3b8;font-size:0.85rem;line-height:1.8;max-width:300px;margin-bottom:16px">
-            Kur'an-ı Kerim hakkında her şeyi sorabileceğin yapay zeka asistanı çok yakında burada.<br>
-            <span style="color:#64748b;font-size:0.78rem">Ayetler · Tefsir · İslam Tarihi · Hadisler</span>
-          </div>
-          <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1.5px solid #d4af3740;border-radius:10px;padding:10px 20px;color:#64748b;font-size:0.78rem">
-            ✨ Geliştirme aşamasında — beklemede kal
-          </div>`;
-    }
-
-
-    async _qaSend() {
-        const inp = document.getElementById('qaInput');
-        const sendBtn = document.getElementById('qaSendBtn');
-        const chatBox = document.getElementById('qaChatBox');
-        if (!inp || !chatBox) return;
-        const text = inp.value.trim();
-        if (!text) return;
-
-        inp.value = '';
-        inp.style.height = 'auto';
-        if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '...'; }
-
-        // Kullanıcı mesajı
-        this._qaMessages.push({ role: 'user', parts: [{ text }] });
-        chatBox.innerHTML += `
-          <div style="display:flex;justify-content:flex-end">
-            <div style="background:linear-gradient(135deg,#1e3a5f,#1e293b);border:1px solid #334155;color:#e2e8f0;border-radius:14px 14px 4px 14px;padding:10px 14px;max-width:80%;font-size:0.88rem;line-height:1.6">${text.replace(/</g,'&lt;')}</div>
-          </div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        // Thinking animasyonu
-        const thinkId = 'qaThink_' + Date.now();
-        chatBox.innerHTML += `
-          <div id="${thinkId}" style="display:flex;align-items:center;gap:8px">
-            <div style="background:#1e293b;border:1px solid #334155;border-radius:14px 14px 14px 4px;padding:10px 14px">
-              <span style="color:#d4af37;font-size:0.82rem">✦ Düşünüyor</span>
-              <span class="qa-dots" style="color:#d4af37">
-                <span style="animation:dvDot 1.2s infinite 0s">.</span>
-                <span style="animation:dvDot 1.2s infinite 0.4s">.</span>
-                <span style="animation:dvDot 1.2s infinite 0.8s">.</span>
-              </span>
-            </div>
-          </div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        try {
-            const apiKey = this._getApiKey();
-            if (!apiKey) { this._promptApiKey((k) => { if(k) this._qaSend(); }); if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='Gönder ✦';} return; }
-            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    system_instruction: { parts: [{ text: `Sen Kur'an-ı Kerim konusunda uzman, samimi ve bilgili bir İslami ilimler asistanısın. \nTürkçe konuşuyorsun. Kur'an ayetleri, sureler, tefsir, hadis, İslam tarihi, peygamberler ve İslami pratikler hakkında sorulara cevap ver.\nAyet referansı verirken (Sure Adı, Ayet No) formatını kullan. Yanıtların kısa, öz ve anlaşılır olsun.\nSaygılı, mütevazı ve öğretici bir dil kullan. Selamlaşmada "es-Selamu Aleyküm" gibi İslami selamları kullanabilirsin.` }] },
-                    contents: this._qaMessages,
-                    generationConfig: { maxOutputTokens: 800 }
-                })
-            });
-            const data = await resp.json();
-            if (data.error) {
-                const msg = data.error.message || JSON.stringify(data.error);
-                const thinkEl2 = document.getElementById(thinkId);
-                if (thinkEl2) thinkEl2.remove();
-                chatBox.innerHTML += `<div style="color:#f87171;font-size:0.8rem;background:#1e293b;border:1px solid #f8717140;border-radius:10px;padding:10px;margin:4px 0">❌ API Hatası: ${msg}<br><button onclick="App._promptApiKey()" style="margin-top:6px;background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.75rem">🔑 Key Güncelle</button></div>`;
-                if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='Gönder ✦';}
-                return;
-            }
-            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Üzgünüm, bir hata oluştu.';
-            this._qaMessages.push({ role: 'model', parts: [{ text: reply }] });
-
-            // Thinking'i kaldır, cevabı yaz
-            const thinkEl = document.getElementById(thinkId);
-            if (thinkEl) thinkEl.remove();
-
-            // Cevap baloncuğu oluştur
-            const replyDiv = document.createElement('div');
-            replyDiv.style.cssText = 'display:flex;align-items:flex-start;gap:8px';
-            replyDiv.innerHTML = `
-              <div style="font-size:1.2rem;margin-top:4px;flex-shrink:0">🤖</div>
-              <div style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:14px 14px 14px 4px;padding:10px 14px;max-width:85%;font-size:0.88rem;line-height:1.7" id="qaReply_${Date.now()}"></div>`;
-            chatBox.appendChild(replyDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            // Typewriter efekti
-            const replyEl = replyDiv.querySelector('div[id^="qaReply_"]');
-            let i = 0;
-            const tw = setInterval(() => {
-                if (i >= reply.length) { clearInterval(tw); return; }
-                replyEl.textContent += reply[i++];
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }, 12);
-
-        } catch(e) {
-            const thinkEl = document.getElementById(thinkId);
-            if (thinkEl) thinkEl.remove();
-            chatBox.innerHTML += `<div style="color:#f87171;font-size:0.8rem;background:#1e293b;border:1px solid #f8717140;border-radius:10px;padding:10px;margin:4px 0">❌ Hata: ${e.message}</div>`;
-        }
-
-        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Gönder ✦'; }
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-
     // ============================================================
     // 🏆 LİDERLİK TABLOSU
     // ============================================================
