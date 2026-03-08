@@ -2204,7 +2204,7 @@ class QuranPortal {
         const duas = [
             { cat: 'Sabah', arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ', tr: 'Sabahladık, mülk de Allah\'a sabahladı.', kaynak: 'Müslim' },
             { cat: 'Akşam', arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ', tr: 'Akşamladık, mülk de Allah\'a akşamladı.', kaynak: 'Müslim' },
-            { cat: 'Yemek', arabic: 'بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ', tr: 'Allah\'ın adıyla ve Allah\'ın bereketi ile.', kaynak: 'Ebu Davud' },
+            { cat: 'Yemek', arabic: 'اَلْحَمْدُ لِلّٰهِ اَلْحَمْدُ لِلّٰهِ اَلْحَمْدُ لِلّٰهِ الَّذِى اَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مِنَ الْمُسْلِمِينَ. اَلْحَمْدُ لِلّٰهِ رَبِّ الْعَالَمِينَ. وَالصَّلَاةُ وَالسَّلَامُ عَلَى سَيِّدِنَا مُحَمَّدٍ وَعَلَى آلِهِ وَصَحْبِهِ اَجْمَعِينَ. ❝وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا اَنْتَ مَوْلَانَا فَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ❞ (٣ defa)', tr: 'Allah\'a hamdolsun, Allah\'a hamdolsun, Allah\'a hamdolsun. O ki bizi yedirdi, içirdi ve Müslümanlardan kıldı. Hamd, âlemlerin Rabbi Allah\'a mahsustur. Efendimiz Muhammed\'e, âline ve ashabının tümüne salât ve selam olsun. ❝Bizi affet, bizi bağışla, bize merhamet et; sen bizim Mevlâmızsın, inkârcı topluma karşı bize yardım et.❞ (3 defa)', kaynak: 'Bakara 286 / Ebu Davud' },
             { cat: 'Uyku', arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', tr: 'Allah\'ım, senin adınla ölür ve dirilirm.', kaynak: 'Buhari' },
             { cat: 'Yolculuk', arabic: 'سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا', tr: 'Bunu bize boyun eğdireni tesbih ederiz.', kaynak: 'Tirmizi' },
             { cat: 'Şifa', arabic: 'أَذْهِبِ الْبَأْسَ رَبَّ النَّاسِ', tr: 'Ey insanların Rabbi, sıkıntıyı gider.', kaynak: 'Buhari' },
