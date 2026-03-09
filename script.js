@@ -512,13 +512,19 @@ class QuranPortal {
             if (grid) grid.classList.add('hidden');
             const trigger = document.getElementById('bubbleTrigger');
             if (trigger) { trigger.classList.remove('open'); trigger.querySelector('.bubble-trigger-icon').textContent = '☰'; }
-            // Meal butonuna bas (göster) sonra scroll et
+            // Meal açıksa direk scroll, kapalıysa önce aç sonra scroll et
+            const mealBlock = document.getElementById('inlineMealBlock');
             const mealBtn = document.getElementById('showMealButton');
-            if (mealBtn) mealBtn.click();
-            setTimeout(() => {
-                const mealBlock = document.getElementById('inlineMealBlock');
-                if (mealBlock) mealBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 200);
+            const scrollToMeal = () => {
+                const el = document.getElementById('inlineMealBlock');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+            if (mealBlock && !mealBlock.classList.contains('hidden')) {
+                scrollToMeal();
+            } else {
+                if (mealBtn) mealBtn.click();
+                setTimeout(scrollToMeal, 350);
+            }
         };
         if (this.dom.esmaBtn) this.dom.esmaBtn.onclick = () => { this._openModal('esmaOverlay'); this._initEsmaPanel(); };
         if (this.dom.leaderboardBtn) this.dom.leaderboardBtn.onclick = () => { this._openModal('leaderboardOverlay'); this._initLeaderboard(); };
@@ -3247,8 +3253,6 @@ class QuranPortal {
             {ar:"الرَّشِيدُ",tr:"Er-Reşid",mean:"Doğru yola ileten"},
             {ar:"الصَّبُورُ",tr:"Es-Sabur",mean:"Çok sabırlı olan"}
         ];
-        const panel = document.getElementById('esmaPanel');
-        if (!panel) return;
         const content = document.getElementById('esmaContent');
         if (!content || content.dataset.loaded) return;
         content.dataset.loaded = '1';
@@ -3426,8 +3430,6 @@ class QuranPortal {
     // 👥 HATİM GRUBU
     // ============================================================
     async _initHatimGroup() {
-        const panel = document.getElementById('hatimPanel');
-        if (!panel) return;
         const content = document.getElementById('hatimContent');
         if (!content) return;
 
