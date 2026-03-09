@@ -3,8 +3,8 @@
  * Cache-first strategy for Quran data files
  */
 
-const CACHE_NAME = 'quran-portal-v2';
-const DATA_CACHE = 'quran-data-v2';
+const CACHE_NAME = 'quran-portal-v3';
+const DATA_CACHE = 'quran-data-v3';
 
 // Core app files to cache immediately on install
 const CORE_FILES = [
@@ -46,8 +46,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Quran data files → cache first, then network
-  if (url.pathname.includes('/data/surah/') || url.pathname.includes('/meal/')) {
+  // Surah data → cache first (sık değişmez)
+  if (url.pathname.includes('/data/surah/')) {
     event.respondWith(
       caches.open(DATA_CACHE).then(async (cache) => {
         const cached = await cache.match(event.request);
@@ -58,6 +58,25 @@ self.addEventListener('fetch', (event) => {
           return response;
         } catch (e) {
           return new Response(JSON.stringify({ error: 'offline' }), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      })
+    );
+    return;
+  }
+
+  // Meal dosyaları → network-first (güncel meal her zaman gelsin)
+  if (url.pathname.includes('/meal/')) {
+    event.respondWith(
+      caches.open(DATA_CACHE).then(async (cache) => {
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) cache.put(event.request, response.clone());
+          return response;
+        } catch (e) {
+          const cached = await cache.match(event.request);
+          return cached || new Response(JSON.stringify({ error: 'offline' }), {
             headers: { 'Content-Type': 'application/json' },
           });
         }
