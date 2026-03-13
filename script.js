@@ -118,10 +118,7 @@ class QuranPortal {
                 this._showApp(user);
                 // Presence — online kullanıcı sayısı
                 this._initPresence(user.uid, user.displayName || user.email?.split('@')[0] || 'Kullanıcı');
-                // Admin yetkisi var mı kontrol et
-                this._checkAdminPrivilege(user.uid);
-                // Admin notu var mı?
-                this._checkUserNote(user.uid);
+
             } else {
                 this.state.currentUser = null;
                 this._showAuthScreen();
@@ -532,8 +529,7 @@ class QuranPortal {
         if (this.dom.notifBtn) this.dom.notifBtn.onclick = () => { this._openModal('notifOverlay'); this._initNotifications(); };
         if (this.dom.offlineBtn) this.dom.offlineBtn.onclick = () => { this._openModal('offlineOverlay'); this._initOfflinePanel(); };
         // Bubble page 2 extra butonlar
-        const adminBtn2 = document.getElementById('bubbleAdminBtn');
-        if (adminBtn2) adminBtn2.onclick = () => { document.getElementById('adminPanelOverlay')?.classList.remove('hidden'); setTimeout(close,80); };
+
         const profileBtn = document.getElementById('bubbleProfileBtn');
         if (profileBtn) profileBtn.onclick = () => { this._showToast('👤 Profil yakında eklenecek!', '#38bdf8'); };
         const themeBtn2 = document.getElementById('bubbleTheme2Btn');
@@ -1746,10 +1742,8 @@ class QuranPortal {
     _initKeyboardEngine() {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') this._stopSystemAudio();
-            // Admin paneli açıksa veya input/textarea'daysa space'i engelleme
             const tag = e.target.tagName;
-            const adminOpen = document.getElementById('adminOverlay') && document.getElementById('adminOverlay').classList.contains('open');
-            if (e.key === ' ' && tag !== 'INPUT' && tag !== 'TEXTAREA' && !adminOpen) {
+            if (e.key === ' ' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
                 e.preventDefault();
                 this.state.audioPlayer.paused ? this.state.audioPlayer.play() : this.state.audioPlayer.pause();
             }
@@ -2249,49 +2243,7 @@ class QuranPortal {
     // 🔍 MEAL İÇİNDE ARA
     // ============================================================
 
-    async _checkAdminPrivilege(uid) {
-        if (!window.FirebaseAuth) return;
-        try {
-            const { db, doc, getDoc } = window.FirebaseAuth;
-            const snap = await getDoc(doc(db, 'admins', uid));
-            if (snap.exists()) {
-                // Bu kullanıcı admin — token'ı localStorage'a yaz
-                window._userIsAdmin = true;
-                localStorage.setItem('adm_user_token', uid);
-                // Admin paneline şifresiz giriş yetki ver
-                if (typeof Admin !== 'undefined') {
-                    Admin.isAuthenticated = true;
-                    // Sol alt köşeye gizli admin göstergesi
-                    if (!document.getElementById('adminIndicator')) {
-                        const ind = document.createElement('div');
-                        ind.id = 'adminIndicator';
-                        ind.style.cssText = 'position:fixed;bottom:60px;left:12px;z-index:9999;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:4px 10px;border-radius:20px;font-size:0.72rem;font-family:sans-serif;font-weight:bold;cursor:pointer;opacity:0.7;transition:opacity 0.2s';
-                        ind.textContent = '🛡️ Admin';
-                        ind.title = 'Ctrl+Q ile Admin Paneli';
-                        ind.onclick = () => { if(typeof Admin!=='undefined') Admin.open(); };
-                        ind.onmouseenter = () => ind.style.opacity='1';
-                        ind.onmouseleave = () => ind.style.opacity='0.7';
-                        document.body.appendChild(ind);
-                    }
-                }
-            }
-        } catch(e) {}
-    }
 
-    async _checkUserNote(uid) {
-        if (!window.FirebaseAuth) return;
-        try {
-            const { db, doc, getDoc, updateDoc } = window.FirebaseAuth;
-            const snap = await getDoc(doc(db, 'userNotes', uid));
-            if (snap.exists() && !snap.data().read) {
-                const data = snap.data();
-                setTimeout(() => {
-                    this._showToast(`📝 Admin'den not: ${data.message}`, '#fcd34d');
-                    updateDoc(doc(db, 'userNotes', uid), { read: true });
-                }, 2000);
-            }
-        } catch(e) {}
-    }
 
     _initVerseSearch() {
         const btn = document.getElementById('verseSearchBtn');
