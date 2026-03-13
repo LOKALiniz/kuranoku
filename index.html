@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      navigator.serviceWorker.register('/kuranoku/sw.js', { scope: '/kuranoku/' })
         .then(reg => {
           // Yeni SW varsa güncelle
           reg.addEventListener('updatefound', () => {
@@ -644,7 +644,7 @@
   <div id="quranAiOverlay" class="qp-modal-overlay hidden"><div class="qp-modal-box qp-modal-wide" style="max-height:90vh;display:flex;flex-direction:column"><div class="qp-modal-header"><span class="qp-modal-title">🤖 Kur'an AI Sohbet</span><button class="qp-modal-close" onclick="App._closeModal('quranAiOverlay')">✕</button></div><div class="qp-modal-body" id="quranAiContent" style="flex:1;overflow:hidden;padding:0"></div></div></div>
   <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
-
+  <script src="admin.js"></script>
   <script>
     // Navbar butonları — bubble menüyü açıp ilgili sayfaya yönlendir
     function _navOpenBubblePage(page) {
