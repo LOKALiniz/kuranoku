@@ -208,7 +208,8 @@ class QuranPortal {
 
     _translateFirebaseError(code) {
         const map = {
-            'auth/user-not-found': 'Bu e-posta ile kayıtlı hesap bulunamadı.',
+            'auth/user-not-found': 'Bu e-posta ile kayıtlı hesap bulunamadı. Lütfen kayıt olun.',
+            'auth/invalid-credential': 'Hesap bulunamadı veya şifre yanlış. Lütfen kayıt olun.',
             'auth/wrong-password': 'Şifre yanlış.',
             'auth/email-already-in-use': 'Bu e-posta zaten kayıtlı.',
             'auth/invalid-email': 'Geçersiz e-posta adresi.',
@@ -217,42 +218,47 @@ class QuranPortal {
             'auth/popup-closed-by-user': 'Giriş penceresi kapatıldı.',
             'auth/network-request-failed': 'Ağ bağlantısı hatası.'
         };
-        return map[code] || 'Bir hata oluştu: ' + code;
+        return map[code] || 'Bir hata oluştu. Lütfen tekrar deneyin.';
     }
 
     _showApp(user) {
         const name = user.displayName || user.email.split('@')[0];
         // Modal kapat
         const modal = document.getElementById('authModal');
-        if (modal) modal.classList.add('hidden');
-        // Top bar güncelle
+        if (modal) modal.style.display = 'none';
+        // Top bar güncelle — display:flex/none ile zorla
         const topBtns = document.getElementById('topAuthButtons');
         const topUser = document.getElementById('topUserInfo');
         const topName = document.getElementById('topUserName');
-        if (topBtns) topBtns.classList.add('hidden');
-        if (topUser) topUser.classList.remove('hidden');
+        if (topBtns) topBtns.style.display = 'none';
+        if (topUser) topUser.style.display = 'flex';
         if (topName) topName.textContent = '👤 ' + name;
         // Çıkış butonu
         const logoutBtn = document.getElementById('topLogoutBtn');
-        if (logoutBtn) logoutBtn.onclick = () => window.FirebaseAuth.signOut(window.FirebaseAuth.auth);
+        if (logoutBtn) logoutBtn.onclick = () => {
+            const { auth, signOut } = window.FirebaseAuth;
+            signOut(auth);
+        };
         // İstatistik paneli içeriği göster
         const statsPrompt = document.getElementById('statsLoginPrompt');
         const statsContent = document.getElementById('statsContent');
-        if (statsPrompt) statsPrompt.classList.add('hidden');
-        if (statsContent) statsContent.classList.remove('hidden');
+        if (statsPrompt) statsPrompt.style.display = 'none';
+        if (statsContent) statsContent.style.display = 'block';
     }
 
     _showAuthScreen() {
-        // Modal AÇMA - sadece top bar güncelle
+        // Top bar güncelle — display:flex/none ile zorla
         const topBtns = document.getElementById('topAuthButtons');
         const topUser = document.getElementById('topUserInfo');
-        if (topBtns) topBtns.classList.remove('hidden');
-        if (topUser) topUser.classList.add('hidden');
+        if (topBtns) topBtns.style.display = 'flex';
+        if (topUser) topUser.style.display = 'none';
+        const topName = document.getElementById('topUserName');
+        if (topName) topName.textContent = '';
         // İstatistik paneli prompt göster
         const statsPrompt = document.getElementById('statsLoginPrompt');
         const statsContent = document.getElementById('statsContent');
-        if (statsPrompt) statsPrompt.classList.remove('hidden');
-        if (statsContent) statsContent.classList.add('hidden');
+        if (statsPrompt) statsPrompt.style.display = 'block';
+        if (statsContent) statsContent.style.display = 'none';
         this._setAuthLoading(false);
     }
 
