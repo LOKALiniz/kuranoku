@@ -264,12 +264,12 @@ class QuranPortal {
 
     openAuthModal(mode) {
         const modal = document.getElementById('authModal');
-        if (modal) { modal.classList.remove('hidden'); this._switchAuthTab(mode||'login'); }
+        if (modal) { modal.style.display = 'flex'; this._switchAuthTab(mode||'login'); }
     }
 
     closeAuthModal() {
         const modal = document.getElementById('authModal');
-        if (modal) modal.classList.add('hidden');
+        if (modal) modal.style.display = 'none';
         document.getElementById('authError').classList.add('hidden');
     }
 
