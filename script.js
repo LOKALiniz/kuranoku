@@ -211,7 +211,8 @@ class QuranPortal {
 
     _translateFirebaseError(code) {
         const map = {
-            'auth/user-not-found': 'Bu e-posta ile kayıtlı hesap bulunamadı.',
+            'auth/user-not-found': 'Bu e-posta ile kayıtlı hesap bulunamadı. Lütfen kayıt olun.',
+            'auth/invalid-credential': 'Hesap bulunamadı veya şifre yanlış. Lütfen kayıt olun.',
             'auth/wrong-password': 'Şifre yanlış.',
             'auth/email-already-in-use': 'Bu e-posta zaten kayıtlı.',
             'auth/invalid-email': 'Geçersiz e-posta adresi.',
@@ -220,7 +221,7 @@ class QuranPortal {
             'auth/popup-closed-by-user': 'Giriş penceresi kapatıldı.',
             'auth/network-request-failed': 'Ağ bağlantısı hatası.'
         };
-        return map[code] || 'Bir hata oluştu: ' + code;
+        return map[code] || 'Bir hata oluştu. Lütfen tekrar deneyin.';
     }
 
     _showApp(user) {
@@ -237,7 +238,7 @@ class QuranPortal {
         if (topName) topName.textContent = '👤 ' + name;
         // Çıkış butonu
         const logoutBtn = document.getElementById('topLogoutBtn');
-        if (logoutBtn) logoutBtn.onclick = () => window.FirebaseAuth.signOut(window.FirebaseAuth.auth);
+        if (logoutBtn) logoutBtn.onclick = () => { const { auth, signOut } = window.FirebaseAuth; signOut(auth); };
         // İstatistik paneli içeriği göster
         const statsPrompt = document.getElementById('statsLoginPrompt');
         const statsContent = document.getElementById('statsContent');
@@ -251,6 +252,8 @@ class QuranPortal {
         const topUser = document.getElementById('topUserInfo');
         if (topBtns) topBtns.classList.remove('hidden');
         if (topUser) topUser.classList.add('hidden');
+        const topName = document.getElementById('topUserName');
+        if (topName) topName.textContent = '👤';
         // İstatistik paneli prompt göster
         const statsPrompt = document.getElementById('statsLoginPrompt');
         const statsContent = document.getElementById('statsContent');
